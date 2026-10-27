@@ -1,0 +1,201 @@
+{
+    "upload_key": "45547021b0184ea0aa7a976fd3ca07f4",
+    "ai_model": "claude-sonnet-4-20250514",
+    "role": "Scrum Master",
+    "role_match": 0.95,
+    "name": "Jude Pagel",
+    "relevant_experience": [
+        "Led Agile ceremonies (daily stand-ups, sprint planning, reviews, retrospectives) for multiple complex teams, ensuring adherence to Scrum principles and practices.",
+        "Coached and mentored development teams and product owners on Agile methodologies, fostering a culture of continuous improvement and self-organization.",
+        "Drove organizational Agile transformation initiatives, optimizing workflows and improving cross-functional collaboration across multiple teams.",
+        "Facilitated impediment removal and risk mitigation, enabling teams to deliver high-quality products efficiently and on time.",
+        "Managed Agile Product Owner role for 9 scrum teams, uniting business and technical teams through clear communication of priorities and key performance measures.",
+        "Built cross-functional partnerships across business units to resolve conflict within assigned teams and remove roadblocks to ensure effective collaboration."
+    ],
+    "technical_experience": {
+        "primary_tools": "SAFe Agile Framework, Scrum, VSTS, Jira, Rally, Blue Yonder, Appian development",
+        "methodologies": "SAFe Agile Framework, Scrum, Kanban, Lean Methodology, Continuous Improvement, Lean Six Sigma",
+        "platforms": "VSTS, CI/CD pipeline, Blue Yonder, Appian, JDA",
+        "domain_expertise": "Supply Chain, Transportation, Merchandising, Food Service, Retail Operations",
+        "collaboration_tools": "VSTS, Jira, Teams, Slack, Confluence",
+        "tooling": "Project management tools, Sprint planning tools, Retrospective tools, Process mapping tools"
+    },
+    "professional_experience": [
+        {
+            "employer": "GORDON FOOD SERVICE",
+            "description": [
+                "Lead and mentor 25+ developers across multiple cross-functional Supply Chain teams through the full software development lifecycle, from design to deployment and maintenance.",
+                "Drive technical architecture decisions, code reviews, and best practices to ensure high-quality, scalable, and maintainable software solutions.",
+                "Collaborate with product management and key stakeholders to translate business requirements into technical specifications and deliver innovative features.",
+                "Manage project timelines, resource allocation, and risk mitigation, consistently delivering projects on time and within budget."
+            ],
+            "title": "Sr Software Engineering Team Lead - Transportation",
+            "start": "7/2022",
+            "until": "PRESENT"
+        },
+        {
+            "employer": "BRAVO LT",
+            "description": [
+                "Led Agile ceremonies (daily stand-ups, sprint planning, reviews, retrospectives) for multiple complex teams, ensuring adherence to Scrum principles and practices.",
+                "Facilitated impediment removal and risk mitigation, enabling teams to deliver high-quality products efficiently and on time.",
+                "Coached and mentored development teams and product owners on Agile methodologies, fostering a culture of continuous improvement and self-organization.",
+                "Drove organizational Agile transformation initiatives, optimizing workflows and improving cross-functional collaboration."
+            ],
+            "title": "Sr Scrum Master Consultant (Gordon Food Service)",
+            "start": "2/2022",
+            "until": "7/2022"
+        },
+        {
+            "employer": "CANTACTIX SOLUTIONS, INC",
+            "description": [
+                "Manage multiple diverse projects through short- and long-term strategic planning using Agile methodology, coordinating and coaching Cantactix, Client, and Vendor teams.",
+                "Track project progress, team accuracy and Effort predictability, to produce increasingly accurate deliverable milestones.",
+                "Coordinate CI/CD pipeline across multiple teams and organizations.",
+                "Engage and lead client Discovery activity to map existing end-to-end processes, identify improvement opportunities and provide recommendations to leadership teams.",
+                "Design and implement both custom software solutions and purchased software packages around existing applications and processes.",
+                "Provide internal expertise on Agile methodology and execution."
+            ],
+            "title": "Business Consultant",
+            "start": "2/2020",
+            "until": "11/2021"
+        },
+        {
+            "employer": "MEIJER",
+            "description": [
+                "Manage multiple diverse projects through short- and long-term strategic planning, including progress updates to leadership regarding wins, issues, and opportunities.",
+                "Evaluate end-to-end processes across merchandising to identify improvement opportunities and provide recommendations to leadership teams.",
+                "Agile Product Manager and Process Coach for 9 scrum teams. Unite business and technical teams through clear communication of priorities and key performance measures.",
+                "Build cross-functional partnerships across business units to resolve conflict within assigned teams and remove roadblocks to ensure effective and efficient collaboration.",
+                "Lead team to deliver on initiatives by providing coaching, guidance, and developmental feedback to build individual skill sets and business expertise."
+            ],
+            "title": "Process Manager",
+            "start": "2/2018",
+            "until": "2/2020"
+        },
+        {
+            "employer": "MEIJER",
+            "description": [
+                "Coach two SAFe Agile teams in the Product Owner role, supporting Merchandising areas. Track and manage project assignments in VSTS for Agile team members. Provide updates and demonstrations at 10-week intervals to leadership.",
+                "Liaison between business and IT areas to validate and define architectural outline of software development or enhancement needs. Main point of contact for Cantactix consultant to evaluate JDA enhancement opportunities.",
+                "Complete Meijer Continuous Improvement (MCQI) training for Green Belt certification."
+            ],
+            "title": "Systems & Process Analyst",
+            "start": "8/2016",
+            "until": "2/2018"
+        }
+    ],
+    "education": [
+        {
+            "degree": "Bachelor of Science, Psychology",
+            "institution_name": "Michigan State University",
+            "institution_location": "East Lansing, MI",
+            "year": null
+        },
+        {
+            "degree": "Bachelor of Arts, Criminal Justice",
+            "institution_name": "Michigan State University",
+            "institution_location": "East Lansing, MI",
+            "year": null
+        }
+    ],
+    "certifications": [
+        {
+            "name": "SAFe Agile Framework - SP (SAFe Practitioner)",
+            "start": null,
+            "until": null
+        },
+        {
+            "name": "SAFe Agile Framework - ASM (Advanced Scrum Master)",
+            "start": null,
+            "until": null
+        },
+        {
+            "name": "SAFe Agile Framework - PO/PM (Product Owner/Product Manager)",
+            "start": null,
+            "until": null
+        },
+        {
+            "name": "SAFe Agile Framework - SPC (SAFe Program Consultant)",
+            "start": null,
+            "until": null
+        },
+        {
+            "name": "Lean Six Sigma Green Belt",
+            "start": null,
+            "until": null
+        },
+        {
+            "name": "PMP (Project Management Professional)",
+            "start": null,
+            "until": null
+        },
+        {
+            "name": "Blue Yonder Technical & Functional Consultant",
+            "start": null,
+            "until": null
+        }
+    ],
+    "generic_level": "L4",
+    "suggested_level": "Senior Scrum Master",
+    "suggested_industries": [
+        {
+            "industry": "Food Service",
+            "industry_match": 0.95
+        },
+        {
+            "industry": "Supply Chain & Logistics",
+            "industry_match": 0.9
+        },
+        {
+            "industry": "Retail",
+            "industry_match": 0.85
+        },
+        {
+            "industry": "Technology Consulting",
+            "industry_match": 0.8
+        },
+        {
+            "industry": "Software Development",
+            "industry_match": 0.75
+        }
+    ],
+    "suggested_roles": [
+        {
+            "role": "Senior Scrum Master",
+            "role_match": 0.95
+        },
+        {
+            "role": "Agile Coach",
+            "role_match": 0.9
+        },
+        {
+            "role": "Lead Scrum Master",
+            "role_match": 0.85
+        },
+        {
+            "role": "Project Manager",
+            "role_match": 0.8
+        },
+        {
+            "role": "Business Analyst",
+            "role_match": 0.75
+        }
+    ],
+    "unknown": {
+        "contact_info": {
+            "address": "2206 Maplerow Avenue NW Grand Rapids, MI 49534",
+            "phone": "(517) 643-1888",
+            "email": "jpagel84@gmail.com",
+            "linkedin": "www.linkedin.com/in/jude-pagel"
+        },
+        "professional_summary": "Highly motivated professional experienced in strategic analytics, Agile business practices, and process improvement/development. Skilled in developing relationships to build and lead effective cross-functional teams, managing complex projects from concept to completion, and utilizing analytics to make key business decisions. Passionate for continuous learning, innovative technical solutions, and team development with the goal of continuous career growth.",
+        "additional_skills": [
+            "Data Analysis",
+            "Statistical Modelling",
+            "Data Architecture",
+            "Training & Facilitation",
+            "Relationship Management",
+            "AI Tools & Practices"
+        ]
+    }
+}

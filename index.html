@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bravo LT - Candidate Intake Assistant</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .fade-in { animation: fadeIn 0.25s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+  <!-- ═══════════════════════════════════════════════════════
+       GOOGLE OAUTH CLIENT ID SETUP MODAL
+       Shows only if GOOGLE_CLIENT_ID is not configured
+  ═══════════════════════════════════════════════════════ -->
+  <div id="oauth-setup-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-600 rounded-xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white">B</div>
+          <div>
+            <h3 class="font-bold text-white text-base">One-Time Google Drive Setup</h3>
+            <p class="text-xs text-slate-400">Takes ~3 minutes. Never needs to be done again.</p>
+          </div>
+        </div>
+        <button id="close-oauth-modal-btn" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
+      </div>
+
+      <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-xs text-slate-300 space-y-2">
+        <p class="text-blue-300 font-bold">Step 1 — Create a Google OAuth Client ID:</p>
+        <ol class="list-decimal list-inside space-y-1 text-slate-300">
+          <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="text-blue-400 underline font-medium">console.cloud.google.com/apis/credentials</a></li>
+          <li>Click <b>Create Credentials → OAuth 2.0 Client ID</b></li>
+          <li>Application type: <b>Web application</b></li>
+          <li>Under <b>Authorized JavaScript Origins</b>, add your app's domain (e.g. <code>https://candidate-intake-assistant.vercel.app</code> or <code>http://localhost:8505</code>)</li>
+          <li>Click <b>Create</b> and copy the <b>Client ID</b></li>
+        </ol>
+        <p class="text-blue-300 font-bold mt-2">Step 2 — Enable the Google Drive API:</p>
+        <ol class="list-decimal list-inside space-y-1">
+          <li>Go to <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" class="text-blue-400 underline">Google Drive API Library</a></li>
+          <li>Click <b>Enable</b></li>
+        </ol>
+      </div>
+
+      <div>
+        <label class="block text-slate-300 font-medium mb-1 text-xs">Paste your Google OAuth Client ID:</label>
+        <input type="text" id="oauth-client-id-input"
+          placeholder="123456789-abc.apps.googleusercontent.com"
+          class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-blue-500">
+      </div>
+
+      <button id="save-oauth-client-id-btn" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-xs">
+        Save & Connect to Google Drive
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       SETTINGS MODAL
+  ═══════════════════════════════════════════════════════ -->
+  <div id="settings-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-lg w-full shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-white text-base">Settings</h3>
+        <button id="close-settings-btn" class="text-slate-400 hover:text-white text-lg">&times;</button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+          <label class="block text-blue-300 font-bold mb-1">Salesforce Lightning Domain</label>
+          <input type="text" id="cfg-sf-domain" class="w-full bg-slate-900 border border-blue-500/50 rounded px-3 py-2 text-white font-mono text-xs" placeholder="e.g. yourcompany.lightning.force.com">
+          <p class="text-[11px] text-slate-400 mt-1">Copy from your browser address bar when logged into Salesforce.</p>
+        </div>
+        <div class="bg-slate-700/30 border border-slate-600 rounded-lg p-3">
+          <label class="block text-slate-300 font-bold mb-1">Google OAuth Client ID</label>
+          <input type="text" id="cfg-oauth-client-id" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white font-mono text-xs" placeholder="123456789-abc.apps.googleusercontent.com">
+          <p class="text-[11px] text-slate-400 mt-1">From <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="text-blue-400 underline">Google Cloud Console</a></p>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-slate-300 mb-1">Contact Type Field</label>
+            <input type="text" id="cfg-field-type" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-white" value="Contact_Type__c">
+          </div>
+          <div>
+            <label class="block text-slate-300 mb-1">Work Auth Field</label>
+            <input type="text" id="cfg-field-auth" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-white" value="Work_Authorization__c">
+          </div>
+          <div>
+            <label class="block text-slate-300 mb-1">LinkedIn Profile Field</label>
+            <input type="text" id="cfg-field-linkedin" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-white" value="LinkedIn_Profile__c">
+          </div>
+          <div>
+            <label class="block text-slate-300 mb-1">Resume URL (Drive) Field</label>
+            <input type="text" id="cfg-field-resume" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-white" value="Resume_URL__c">
+          </div>
+          <div>
+            <label class="block text-slate-300 mb-1">Key Notes Field</label>
+            <input type="text" id="cfg-field-notes" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-white" value="Key_Notes__c">
+          </div>
+          <div>
+            <label class="block text-slate-300 mb-1">Account Name</label>
+            <input type="text" id="cfg-field-account" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-white" value="Recruits">
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end gap-2">
+        <button id="disconnect-drive-btn" class="px-3 py-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded text-xs border border-red-600/40">
+          Disconnect Google Drive
+        </button>
+        <button id="save-settings-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-medium text-xs">
+          Save Settings
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       TOP NAVIGATION
+  ═══════════════════════════════════════════════════════ -->
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-40 px-6 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="h-9 w-9 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/30">B</div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            Bravo LT <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">Candidate Intake</span>
+          </h1>
+          <p class="text-xs text-slate-400">Bravotizer JSON → Google Drive → Salesforce Contact</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3 text-xs">
+        <!-- Google Drive Auth Status Pill -->
+        <div id="drive-auth-status" class="flex items-center gap-2">
+          <button id="connect-drive-btn" class="px-3 py-1.5 rounded-md bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 font-medium transition border border-emerald-600/40 flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.545 10.239v3.821h5.445c-.712 2.315-2.647 3.972-5.445 3.972a6.033 6.033 0 110-12.064c1.498 0 2.866.549 3.921 1.453l2.814-2.814A9.969 9.969 0 0012.545 2C7.021 2 2.543 6.477 2.543 12s4.478 10 10.002 10c8.396 0 10.249-7.85 9.426-11.748l-9.426-.013z"/></svg>
+            Sign in with Google Drive
+          </button>
+          <div id="drive-connected-pill" class="hidden items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-600/20 border border-emerald-600/40 text-emerald-400 font-medium">
+            <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+            <span id="drive-user-email" class="text-[11px]">Connected</span>
+            <button id="drive-signout-btn" class="text-slate-400 hover:text-red-400 ml-1 text-[11px]">×</button>
+          </div>
+        </div>
+
+        <button id="load-sample-btn" class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-blue-400 font-medium transition border border-slate-700 flex items-center gap-1.5">
+          ⚡ Demo
+        </button>
+        <button id="settings-toggle-btn" class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition border border-slate-700 flex items-center gap-1.5">
+          ⚙️ Settings
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Salesforce domain warning banner -->
+  <div id="domain-warning-banner" class="bg-amber-500/10 border-b border-amber-500/30 px-6 py-2.5 text-xs text-amber-300">
+    <div class="max-w-7xl mx-auto flex items-center gap-2">
+      <span>⚠️</span>
+      <span><b>Set your Salesforce domain</b> in ⚙️ Settings so the launch button opens your correct Salesforce instance.</span>
+      <button id="banner-fix-domain-btn" class="ml-auto underline font-bold hover:text-white">Configure Now</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════
+       MAIN CONTENT
+  ═══════════════════════════════════════════════════════ -->
+  <main class="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- LEFT COLUMN -->
+    <div class="lg:col-span-5 space-y-5">
+      <!-- Bravotizer JSON -->
+      <div class="bg-slate-800/70 border border-slate-700 rounded-xl p-5 shadow-lg">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+          <span class="h-5 w-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs">1</span>
+          Bravotizer JSON
+        </h2>
+        <div id="drop-zone" class="border-2 border-dashed border-slate-600 hover:border-blue-500 rounded-lg p-5 text-center cursor-pointer transition bg-slate-900/50">
+          <div class="text-slate-400 text-xs mb-1">
+            <span class="text-blue-400 font-medium">Click to upload</span> or drag & drop JSON file
+          </div>
+          <div class="text-[11px] text-slate-500">From https://rbt.bravolt.com/</div>
+          <input type="file" id="json-file-input" accept=".json" class="hidden">
+        </div>
+        <div class="mt-3">
+          <label class="text-[11px] text-slate-400 block mb-1">Or paste raw JSON directly:</label>
+          <textarea id="raw-json-input" rows="3" placeholder="Paste { ... } here"
+            class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs font-mono text-slate-300 focus:outline-none focus:border-blue-500 transition"></textarea>
+        </div>
+      </div>
+
+      <!-- Recruiter Context -->
+      <div class="bg-slate-800/70 border border-slate-700 rounded-xl p-5 shadow-lg space-y-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+          <span class="h-5 w-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs">2</span>
+          Recruiter Context
+        </h2>
+
+        <!-- Salesforce Domain -->
+        <div class="bg-slate-900 p-3 rounded-lg border border-slate-700 text-xs space-y-1">
+          <label class="block text-slate-300 font-medium flex items-center justify-between">
+            <span>Salesforce Domain</span>
+            <span id="domain-status-badge" class="text-[10px] text-amber-400 font-bold">Action Required</span>
+          </label>
+          <div class="flex gap-2">
+            <input type="text" id="quick-sf-domain" placeholder="yourcompany.lightning.force.com"
+              class="flex-1 bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-white font-mono text-xs focus:outline-none focus:border-blue-500">
+            <button id="save-quick-domain-btn" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-medium">Save</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 text-xs">
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Work Authorization</label>
+            <select id="work-auth-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500">
+              <option value="USC" selected>USC (US Citizen)</option>
+              <option value="Green Card">Green Card</option>
+              <option value="H-1B">H-1B</option>
+              <option value="C2C">C2C</option>
+              <option value="TN">TN Visa</option>
+              <option value="EAD">EAD</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Target Tech Folder</label>
+            <select id="tech-folder-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500">
+              <option value="Delivery Manager">Delivery Manager</option>
+              <option value="Software Developer">Software Developer</option>
+              <option value="Data Engineer">Data Engineer</option>
+              <option value="Azure Engineer">Azure Engineer</option>
+              <option value="UX Designer">UX Designer</option>
+              <option value="Project Manager - Healthcare (Non-IT)">Project Manager - Healthcare (Non-IT)</option>
+              <option value="Supplier Performance Analyst">Supplier Performance Analyst</option>
+              <option value="Electronic Engineers">Electronic Engineers</option>
+              <option value="CX/DX">CX/DX</option>
+              <option value="Bissell | Utility Team | Project Resumes">Bissell | Utility Team</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1 text-xs">Gemini Screening Notes (from Email)</label>
+          <textarea id="gemini-notes-input" rows="3" placeholder="Paste screening notes from Gemini / email here..."
+            class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1 text-xs">Google Drive Folder URL (Auto-populated on creation)</label>
+          <input type="text" id="drive-folder-url" placeholder="https://drive.google.com/drive/folders/..."
+            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-emerald-400 font-mono placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="lg:col-span-7 space-y-5">
+
+      <!-- Candidate Header Card -->
+      <div class="bg-gradient-to-r from-slate-800 to-slate-850 border border-slate-700 rounded-xl p-5 shadow-lg">
+        <div class="flex items-start justify-between">
+          <div class="flex items-center space-x-4">
+            <div id="candidate-avatar" class="h-14 w-14 rounded-full bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold text-xl flex items-center justify-center">--</div>
+            <div>
+              <h2 id="candidate-name" class="text-xl font-bold text-white">No Candidate Loaded</h2>
+              <p id="candidate-role" class="text-xs text-blue-400 font-medium mt-0.5">Upload or paste a JSON to start</p>
+              <div class="flex flex-wrap gap-2 mt-2 text-xs">
+                <span id="pill-email" class="bg-slate-900/60 px-2.5 py-1 rounded border border-slate-700 text-slate-300 flex items-center gap-1">✉️ <span class="val">--</span></span>
+                <span id="pill-phone" class="bg-slate-900/60 px-2.5 py-1 rounded border border-slate-700 text-slate-300 flex items-center gap-1">📞 <span class="val">--</span></span>
+                <a id="pill-linkedin" href="#" target="_blank" class="bg-slate-900/60 hover:bg-slate-700/60 px-2.5 py-1 rounded border border-slate-700 text-blue-400 flex items-center gap-1 transition">🔗 <span class="val">LinkedIn</span></a>
+              </div>
+            </div>
+          </div>
+          <div id="match-badge" class="hidden px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">95% Match</div>
+        </div>
+        <div class="mt-4 pt-4 border-t border-slate-700/80">
+          <div class="flex justify-between items-center mb-1">
+            <label class="text-xs font-medium text-slate-300">Salesforce Contact Title Headline</label>
+            <button id="copy-title-btn" class="text-[11px] text-blue-400 hover:text-blue-300 font-medium">📋 Copy</button>
+          </div>
+          <input type="text" id="candidate-title"
+            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-medium text-white focus:outline-none focus:border-blue-500"
+            placeholder="[Name] | [Role] | [Certs] | [State] | [Work Auth]">
+        </div>
+      </div>
+
+      <!-- Google Drive Section -->
+      <div class="bg-slate-800/70 border border-slate-700 rounded-xl p-5 shadow-lg space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            <span>📁</span> Google Drive Folder
+          </h3>
+          <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium font-mono text-[11px]">first last | skill | skill | skill | Country</span>
+        </div>
+
+        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-2">
+          <div class="text-[11px] text-slate-400 flex items-center gap-1.5 flex-wrap">
+            <span>Target:</span>
+            <span class="text-slate-300 font-mono">Shared with me › Candidates › Technology ›</span>
+            <span id="drive-folder-target" class="text-blue-400 font-semibold font-mono">Delivery Manager</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <input type="text" id="computed-folder-name"
+              class="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs font-mono font-medium text-emerald-400 focus:outline-none focus:border-emerald-500">
+            <button id="copy-folder-name-btn" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs border border-slate-700 transition whitespace-nowrap">📋 Copy</button>
+          </div>
+
+          <div class="pt-2 border-t border-slate-800/80">
+            <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-semibold">Tweak Skills or Country:</div>
+            <div class="grid grid-cols-4 gap-2 text-xs">
+              <div><label class="text-[10px] text-slate-500 block mb-0.5">Skill 1</label><input type="text" id="skill-1" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs"></div>
+              <div><label class="text-[10px] text-slate-500 block mb-0.5">Skill 2</label><input type="text" id="skill-2" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs"></div>
+              <div><label class="text-[10px] text-slate-500 block mb-0.5">Skill 3</label><input type="text" id="skill-3" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs"></div>
+              <div><label class="text-[10px] text-slate-500 block mb-0.5">Country</label><input type="text" id="skill-country" value="US" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono font-bold"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Create Folder Button -->
+        <button id="create-drive-folder-btn"
+          class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition transform active:scale-[0.99]">
+          <svg id="drive-btn-spinner" class="hidden w-4 h-4 spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" class="opacity-25"/><path d="M4 12a8 8 0 018-8" class="opacity-75"/></svg>
+          <svg id="drive-btn-icon" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+          <span id="drive-btn-text">⚡ Create Folder in Google Drive</span>
+        </button>
+
+        <div id="drive-success-alert" class="hidden bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-xs text-emerald-300 flex items-center justify-between">
+          <span class="flex items-center gap-1.5">
+            <span>✅</span> Folder & Screening Brief created in Google Drive!
+          </span>
+          <a id="drive-open-link" href="#" target="_blank" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium text-[11px] transition">Open in Drive ↗</a>
+        </div>
+
+        <button id="copy-summary-doc-btn" class="w-full py-2 bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs rounded-lg border border-slate-700 font-medium transition flex items-center justify-center gap-1.5">
+          📝 Copy Screening Brief (Markdown)
+        </button>
+      </div>
+
+      <!-- Salesforce Section -->
+      <div class="bg-slate-800/70 border border-slate-700 rounded-xl p-5 shadow-lg space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            <span>☁️</span> Salesforce Contact Creation
+          </h3>
+          <span class="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium">Lightning Pre-Fill</span>
+        </div>
+
+        <a id="open-sf-btn" href="#" target="_blank"
+          class="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm shadow-xl flex items-center justify-center gap-2 transition transform active:scale-[0.99] text-center">
+          🚀 Open Pre-Filled Contact in Salesforce
+        </a>
+
+        <div class="border border-slate-700/80 rounded-lg overflow-hidden text-xs">
+          <table class="w-full divide-y divide-slate-700">
+            <thead class="bg-slate-900 text-slate-400 text-[11px] uppercase tracking-wider">
+              <tr>
+                <th class="px-3 py-2 text-left font-medium">Salesforce Field</th>
+                <th class="px-3 py-2 text-left font-medium">Value</th>
+                <th class="px-3 py-2 text-right font-medium">Copy</th>
+              </tr>
+            </thead>
+            <tbody id="fields-table-body" class="divide-y divide-slate-800 bg-slate-900/40 text-slate-300">
+              <tr><td colspan="3" class="px-3 py-4 text-center text-slate-500">Load a JSON to view mapped fields</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 bg-blue-600 text-white text-xs px-4 py-2.5 rounded-lg shadow-xl hidden fade-in z-50 flex items-center gap-2">
+    <span>✅</span> <span id="toast-msg">Done</span>
+  </div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════════
+// Shared team defaults (bakes in settings for all colleagues)
+const DEFAULT_SF_DOMAIN = 'd1a000000yvf8eao.lightning.force.com';
+const DEFAULT_OAUTH_CLIENT_ID = ''; // Set Bravo LT's Google OAuth Client ID here
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+let config = {
+  sfDomain:        localStorage.getItem('sfDomain') || DEFAULT_SF_DOMAIN,
+  oauthClientId:   localStorage.getItem('oauthClientId') || DEFAULT_OAUTH_CLIENT_ID,
+  fieldContactType: localStorage.getItem('fieldContactType') || 'Contact_Type__c',
+  fieldWorkAuth:   localStorage.getItem('fieldWorkAuth') || 'Work_Authorization__c',
+  fieldLinkedIn:   localStorage.getItem('fieldLinkedIn') || 'LinkedIn_Profile__c',
+  fieldResumeUrl:  localStorage.getItem('fieldResumeUrl') || 'Resume_URL__c',
+  fieldKeyNotes:   localStorage.getItem('fieldKeyNotes') || 'Key_Notes__c',
+  accountName:     localStorage.getItem('accountName') || 'Recruits',
+};
+
+// Google Drive auth state
+let driveAccessToken = null;
+let driveUserEmail = null;
+let tokenClient = null;
+let pendingDriveAction = null;
+
+// Candidate state
+let candidateData = null;
+
+const SAMPLE = {
+  role: 'agnostic', name: 'Jude Pagel', suggested_level: 'Senior Scrum Master', role_match: 0.95,
+  suggested_roles: [{role: 'Senior Scrum Master', role_match: 0.95}],
+  technical_experience: { primary_tools: 'SAFe Agile Framework, Scrum, VSTS, Jira, Rally' },
+  certifications: [
+    {name: 'SAFe Agile Framework - SP (SAFe Practitioner)'},
+    {name: 'PMP (Project Management Professional)'},
+    {name: 'Scrum Alliance® Certified Scrum Master (CSM)'}
+  ],
+  contact: { address: '2206 Maplerow Avenue NW Grand Rapids, MI 49534', phone: '(517) 643-1888', mobile: '(517) 643-1888', email: 'jpagel84@gmail.com', linkedin: 'www.linkedin.com/in/jude-pagel' },
+  unknown: { professional_summary: 'Highly motivated Agile professional experienced in SAFe transformations and process improvement.' }
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// GOOGLE IDENTITY SERVICES - OAUTH 2.0
+// ═══════════════════════════════════════════════════════════════════
+function initGoogleAuth() {
+  if (!config.oauthClientId) return;
+
+  if (typeof google === 'undefined' || !google.accounts) {
+    // GIS not loaded yet, retry
+    setTimeout(initGoogleAuth, 500);
+    return;
+  }
+
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: config.oauthClientId,
+    scope: 'https://www.googleapis.com/auth/drive',
+    callback: (response) => {
+      if (response.error) {
+        showToast('Google sign-in failed: ' + response.error);
+        pendingDriveAction = null;
+        return;
+      }
+      driveAccessToken = response.access_token;
+      fetchDriveUserInfo();
+      if (pendingDriveAction) {
+        const action = pendingDriveAction;
+        pendingDriveAction = null;
+        action();
+      }
+    }
+  });
+
+  document.getElementById('connect-drive-btn').classList.remove('hidden');
+}
+
+function fetchDriveUserInfo() {
+  fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { Authorization: 'Bearer ' + driveAccessToken }
+  })
+  .then(r => r.json())
+  .then(info => {
+    driveUserEmail = info.email || 'Connected';
+    setDriveConnectedUI(true);
+    showToast('✅ Connected to Google Drive as ' + driveUserEmail);
+  })
+  .catch(() => {
+    setDriveConnectedUI(true);
+    showToast('✅ Google Drive connected');
+  });
+}
+
+function requestDriveAccess() {
+  if (!config.oauthClientId) {
+    document.getElementById('oauth-setup-modal').classList.remove('hidden');
+    return;
+  }
+  if (!tokenClient) {
+    initGoogleAuth();
+    setTimeout(requestDriveAccess, 600);
+    return;
+  }
+  tokenClient.requestAccessToken();
+}
+
+function setDriveConnectedUI(connected) {
+  const btn = document.getElementById('connect-drive-btn');
+  const pill = document.getElementById('drive-connected-pill');
+  const emailSpan = document.getElementById('drive-user-email');
+
+  if (connected) {
+    btn.classList.add('hidden');
+    pill.classList.remove('hidden');
+    pill.classList.add('flex');
+    emailSpan.textContent = driveUserEmail || 'Connected';
+  } else {
+    btn.classList.remove('hidden');
+    pill.classList.add('hidden');
+    pill.classList.remove('flex');
+    driveAccessToken = null;
+    driveUserEmail = null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// GOOGLE DRIVE REST API
+// ═══════════════════════════════════════════════════════════════════
+async function driveRequest(url, method = 'GET', body = null, contentType = 'application/json', isRetry = false) {
+  const opts = {
+    method,
+    headers: { Authorization: 'Bearer ' + driveAccessToken }
+  };
+  if (body) {
+    opts.headers['Content-Type'] = contentType;
+    opts.body = typeof body === 'string' ? body : JSON.stringify(body);
+  }
+  const res = await fetch(url, opts);
+  if (res.status === 401 && !isRetry && tokenClient) {
+    driveAccessToken = null;
+    return new Promise((resolve, reject) => {
+      pendingDriveAction = async () => {
+        try {
+          const retryRes = await driveRequest(url, method, body, contentType, true);
+          resolve(retryRes);
+        } catch (e) {
+          reject(e);
+        }
+      };
+      requestDriveAccess();
+    });
+  }
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Drive API Error ${res.status}`);
+  }
+  return res.status === 204 ? {} : res.json();
+}
+
+async function findOrCreateFolder(name, parentId = null) {
+  // Search for existing folder
+  let q = `mimeType='application/vnd.google-apps.folder' and name='${name.replace(/'/g, "\\'")}' and trashed=false`;
+  if (parentId) q += ` and '${parentId}' in parents`;
+
+  const search = await driveRequest(
+    `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,webViewLink)&supportsAllDrives=true&includeItemsFromAllDrives=true`
+  );
+
+  if (search.files && search.files.length > 0) return search.files[0];
+
+  // Create new folder
+  const body = { name, mimeType: 'application/vnd.google-apps.folder' };
+  if (parentId) body.parents = [parentId];
+  return driveRequest('https://www.googleapis.com/drive/v3/files?fields=id,name,webViewLink&supportsAllDrives=true', 'POST', body);
+}
+
+async function createGoogleDoc(title, content, parentFolderId) {
+  // Create doc as plain text, then move it
+  const boundary = '-------314159265358979323846';
+  const delimiter = `\r\n--${boundary}\r\n`;
+  const close_delim = `\r\n--${boundary}--`;
+
+  const contentType = 'application/vnd.google-apps.document';
+  const metadata = JSON.stringify({ name: title, mimeType: contentType, parents: [parentFolderId] });
+
+  const multipartBody =
+    delimiter +
+    'Content-Type: application/json\r\n\r\n' + metadata +
+    delimiter +
+    'Content-Type: text/plain\r\n\r\n' + content +
+    close_delim;
+
+  return driveRequest(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink&supportsAllDrives=true',
+    'POST',
+    multipartBody,
+    `multipart/related; boundary="${boundary}"`
+  );
+}
+
+async function createCandidateDriveFolder() {
+  if (!candidateData) { alert('Please load a candidate JSON first!'); return; }
+
+  if (!driveAccessToken) {
+    pendingDriveAction = () => createCandidateDriveFolder();
+    requestDriveAccess();
+    showToast('Signing in to Google Drive...');
+    return;
+  }
+
+  const folderName = document.getElementById('computed-folder-name').value.trim();
+  const categoryName = document.getElementById('tech-folder-select').value;
+  const notes = document.getElementById('gemini-notes-input').value.trim();
+  const candidateName = candidateData.name || 'Candidate';
+
+  setBtnLoading(true);
+
+  try {
+    // 1. Find category folder (Technology > Delivery Manager / Software Developer etc.)
+    // Search for the category folder by name
+    const categoryFolder = await findOrCreateFolder(categoryName);
+
+    // 2. Create candidate folder inside category
+    const candidateFolder = await findOrCreateFolder(folderName, categoryFolder.id);
+
+    // 3. Create screening brief Google Doc if notes exist
+    if (notes) {
+      const docContent =
+        `Bravo LT Candidate Screening Brief\n` +
+        `================================\n\n` +
+        `Candidate: ${candidateName}\n` +
+        `Folder: ${folderName}\n` +
+        `Date: ${new Date().toLocaleDateString()}\n\n` +
+        `---\n\n` +
+        `RECRUITER & GEMINI SCREENING NOTES\n` +
+        `-----------------------------------\n` +
+        notes + '\n\n' +
+        `---\n\n` +
+        `PROFESSIONAL SUMMARY\n` +
+        `--------------------\n` +
+        (candidateData.unknown?.professional_summary || 'N/A') + '\n\n' +
+        `CERTIFICATIONS\n` +
+        `--------------\n` +
+        (candidateData.certifications || []).map(c => `• ${c.name}`).join('\n');
+
+      await createGoogleDoc(`${candidateName} - Screening Brief`, docContent, candidateFolder.id);
+    }
+
+    // 4. Populate the Drive URL field
+    const folderUrl = candidateFolder.webViewLink;
+    document.getElementById('drive-folder-url').value = folderUrl;
+    document.getElementById('drive-open-link').href = folderUrl;
+    document.getElementById('drive-success-alert').classList.remove('hidden');
+
+    // 5. Refresh Salesforce URL with Drive folder link
+    rebuildSalesforceUrl();
+    showToast('✅ Google Drive folder created!');
+  } catch (err) {
+    alert('Drive Error: ' + err.message);
+    console.error(err);
+  } finally {
+    setBtnLoading(false);
+  }
+}
+
+function setBtnLoading(loading) {
+  const btn = document.getElementById('create-drive-folder-btn');
+  const spinner = document.getElementById('drive-btn-spinner');
+  const icon = document.getElementById('drive-btn-icon');
+  const text = document.getElementById('drive-btn-text');
+
+  btn.disabled = loading;
+  spinner.classList.toggle('hidden', !loading);
+  icon.classList.toggle('hidden', loading);
+  text.textContent = loading ? 'Creating folder...' : '⚡ Create Folder in Google Drive';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DATA EXTRACTORS
+// ═══════════════════════════════════════════════════════════════════
+function findEmail(d) {
+  if (!d) return '';
+  const candidates = [
+    d.contact?.email, d.contact_info?.email, d.unknown?.contact_info?.email, d.unknown?.email, d.email
+  ];
+  for (const c of candidates) if (c && c.includes('@')) return c.trim();
+  const m = JSON.stringify(d).match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+  return m ? m[0] : '';
+}
+
+function findPhone(d) {
+  if (!d) return { phone: '', mobile: '' };
+  let mob = '', ph = '';
+  const mobCandidates = [d.contact?.mobile, d.contact_info?.mobile, d.unknown?.contact_info?.mobile, d.mobile];
+  for (const m of mobCandidates) if (m && /\d/.test(m)) { mob = m.trim(); break; }
+  const phCandidates = [d.contact?.phone, d.contact?.cell, d.contact_info?.phone, d.unknown?.contact_info?.phone, d.phone];
+  for (const p of phCandidates) if (p && /\d/.test(p)) { ph = p.trim(); break; }
+  if (!ph && mob) ph = mob;
+  if (!mob && ph) mob = ph;
+  if (!ph) { const m = JSON.stringify(d).match(/\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/); if (m) { ph = m[0]; mob = m[0]; } }
+  return { phone: ph, mobile: mob };
+}
+
+function findLinkedIn(d) {
+  if (!d) return '';
+  const candidates = [d.contact?.linkedin, d.contact_info?.linkedin, d.unknown?.contact_info?.linkedin, d.linkedin];
+  for (const l of candidates) {
+    if (l && l.toLowerCase().includes('linkedin')) {
+      return l.startsWith('http') ? l.trim() : 'https://' + l.trim();
+    }
+  }
+  const m = JSON.stringify(d).match(/(https?:\/\/)?(www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+\/?/);
+  if (m) return m[0].startsWith('http') ? m[0] : 'https://' + m[0];
+  return '';
+}
+
+function findAddress(d) {
+  if (!d) return '';
+  const candidates = [
+    d.contact?.address, d.contact?.location, d.contact_info?.address,
+    d.unknown?.contact_info?.address, d.address, d.location
+  ];
+  for (const a of candidates) if (a && a.length > 3) return a.trim();
+  return '';
+}
+
+function extractState(addr) {
+  if (!addr) return '';
+  const m = addr.match(/\b([A-Z]{2})\b\s+\d{5}/);
+  if (m) return m[1];
+  const mn = addr.match(/,\s*([A-Za-z\s]+)\s+\d{5}/);
+  if (mn) {
+    const map = { Michigan:'MI', Ohio:'OH', Illinois:'IL', 'New York':'NY', Texas:'TX', California:'CA' };
+    return map[mn[1].trim()] || mn[1].trim().slice(0,2).toUpperCase();
+  }
+  return '';
+}
+
+function extractCountry(addr, workAuth) {
+  if (['USC','Green Card','H-1B','TN'].includes(workAuth)) return 'US';
+  if (addr && (addr.match(/\b[A-Z]{2}\b\s+\d{5}/) || addr.includes('USA'))) return 'US';
+  if (addr && addr.includes('Canada')) return 'CA';
+  if (addr && addr.includes('India')) return 'IN';
+  return 'US';
+}
+
+function getCleanRoleTitle(d) {
+  const candidates = [];
+  if (d.suggested_level) candidates.push(d.suggested_level);
+  if (d.role) candidates.push(d.role);
+  (d.suggested_roles || []).forEach(sr => { if (sr?.role) candidates.push(sr.role); });
+  (d.professional_experience || []).slice(0,2).forEach(pe => { if (pe?.title) candidates.push(pe.title); });
+
+  for (const c of candidates) {
+    const s = String(c || '').trim();
+    if (!s || /^L\d+$/i.test(s)) continue;
+    if (['agnostic','general','unknown','n/a','none'].includes(s.toLowerCase())) continue;
+    return s;
+  }
+  return 'Candidate';
+}
+
+function extractTopSkills(d) {
+  const skills = [];
+  const roleStr = getCleanRoleTitle(d);
+  if (roleStr && roleStr !== 'Candidate') {
+    const acro = roleStr.match(/\(([A-Z]{2,6})\)/);
+    if (acro) skills.push(acro[1]);
+    else if (roleStr.toLowerCase().includes('scrum master')) skills.push('Scrum Master');
+    else if (roleStr.toLowerCase().includes('data engineer')) skills.push('Data Engineer');
+    else if (roleStr.toLowerCase().includes('azure')) skills.push('Azure Engineer');
+    else if (roleStr.toLowerCase().includes('developer')) skills.push('Software Developer');
+    else skills.push(roleStr.split(/[-/|]/)[0].trim().slice(0,20));
+  }
+
+  (d.certifications || []).forEach(c => {
+    const n = typeof c === 'object' ? c.name : String(c);
+    ['PMP','SAFe','CSM','RTE','AWS','Azure','GCP','Six Sigma','CISSP','ITIL'].forEach(tag => {
+      if (n.includes(tag) && !skills.some(s => s.toLowerCase() === tag.toLowerCase())) {
+        skills.push(tag === 'Six Sigma' ? 'LSS' : tag);
+      }
+    });
+  });
+
+  const tools = (d.technical_experience?.primary_tools || '').split(',');
+  tools.forEach(t => {
+    const clean = t.split('(')[0].trim();
+    if (clean && !skills.some(s => s.toLowerCase() === clean.toLowerCase())) skills.push(clean);
+  });
+
+  const res = [];
+  skills.forEach(s => { if (!res.includes(s) && res.length < 3) res.push(s); });
+  while (res.length < 3) res.push('General');
+  return res;
+}
+
+function generateBravoTitle(d, workAuth) {
+  const parts = [d.name || ''];
+  const role = getCleanRoleTitle(d);
+  if (role && role !== 'Candidate') parts.push(role);
+
+  const certTags = [];
+  (d.certifications || []).forEach(c => {
+    const n = typeof c === 'object' ? c.name : String(c);
+    if (n.includes('PMP') && !certTags.includes('PMP')) certTags.push('PMP');
+    else if (n.includes('SAFe') && !certTags.includes('SAFe')) certTags.push('SAFe');
+    else if ((n.includes('CSM') || n.includes('Scrum Master')) && !certTags.includes('CSM')) certTags.push('CSM');
+    else if (n.includes('Six Sigma') && !certTags.includes('LSS')) certTags.push('LSS');
+  });
+  parts.push(...certTags.slice(0,2));
+
+  const state = extractState(findAddress(d));
+  if (state) parts.push(state);
+  if (workAuth) parts.push(workAuth);
+  return parts.join(' | ');
+}
+
+function recommendFolder(d) {
+  const texts = [d.role, d.suggested_level,
+    ...(d.suggested_roles || []).map(sr => sr?.role || ''),
+    ...(d.professional_experience || []).slice(0,3).map(pe => pe?.title || '')
+  ].join(' ').toLowerCase();
+
+  if (['scrum','agile','delivery','release train','rte','program manager'].some(k => texts.includes(k))) return 'Delivery Manager';
+  if (['data','analytics'].some(k => texts.includes(k))) return 'Data Engineer';
+  if (['azure','aws','cloud','devops'].some(k => texts.includes(k))) return 'Azure Engineer';
+  if (['ux','ui',' design'].some(k => texts.includes(k))) return 'UX Designer';
+  if (['healthcare','supplier'].some(k => texts.includes(k))) return 'Project Manager - Healthcare (Non-IT)';
+  if (['developer','software','full stack'].some(k => texts.includes(k))) return 'Software Developer';
+  return 'Software Developer';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// UI UPDATE
+// ═══════════════════════════════════════════════════════════════════
+function updateUI() {
+  if (!candidateData) return;
+  const d = candidateData;
+  const name = d.name || 'Candidate';
+  const parts = name.trim().split(/\s+/);
+  const firstName = parts[0] || '';
+  const lastName = parts.slice(1).join(' ') || '';
+
+  const email = findEmail(d);
+  const { phone, mobile } = findPhone(d);
+  const linkedin = findLinkedIn(d);
+  const addr = findAddress(d);
+
+  document.getElementById('candidate-avatar').textContent = (firstName[0]||'') + (lastName[0]||'') || '??';
+  document.getElementById('candidate-name').textContent = name;
+  document.getElementById('candidate-role').textContent = getCleanRoleTitle(d);
+
+  document.getElementById('pill-email').querySelector('.val').textContent = email || 'No Email';
+  document.getElementById('pill-phone').querySelector('.val').textContent = phone || mobile || 'No Phone';
+  const liEl = document.getElementById('pill-linkedin');
+  liEl.href = linkedin || '#';
+  liEl.querySelector('.val').textContent = linkedin ? 'LinkedIn' : 'No LinkedIn';
+
+  if (d.role_match) {
+    const badge = document.getElementById('match-badge');
+    badge.textContent = Math.round(d.role_match * 100) + '% Match';
+    badge.classList.remove('hidden');
+  }
+
+  const workAuth = document.getElementById('work-auth-select').value;
+  const title = generateBravoTitle(d, workAuth);
+  document.getElementById('candidate-title').value = title;
+
+  const skills = extractTopSkills(d);
+  document.getElementById('skill-1').value = skills[0] || '';
+  document.getElementById('skill-2').value = skills[1] || '';
+  document.getElementById('skill-3').value = skills[2] || '';
+  document.getElementById('skill-country').value = extractCountry(addr, workAuth);
+
+  updateFolderName();
+
+  const folder = recommendFolder(d);
+  document.getElementById('tech-folder-select').value = folder;
+  document.getElementById('drive-folder-target').textContent = folder;
+
+  rebuildSalesforceUrl();
+}
+
+function updateFolderName() {
+  if (!candidateData) return;
+  const name = candidateData.name || '';
+  const s1 = document.getElementById('skill-1').value.trim() || 'Skill';
+  const s2 = document.getElementById('skill-2').value.trim() || 'Skill';
+  const s3 = document.getElementById('skill-3').value.trim() || 'Skill';
+  const country = document.getElementById('skill-country').value.trim() || 'US';
+  document.getElementById('computed-folder-name').value = `${name} | ${s1} | ${s2} | ${s3} | ${country}`;
+}
+
+function rebuildSalesforceUrl() {
+  if (!candidateData) return;
+  const d = candidateData;
+  const parts = (d.name || '').trim().split(/\s+/);
+  const firstName = parts[0] || '';
+  const lastName = parts.slice(1).join(' ') || '';
+  const email = findEmail(d);
+  const { phone, mobile } = findPhone(d);
+  const linkedin = findLinkedIn(d);
+  const driveUrl = document.getElementById('drive-folder-url').value.trim();
+  const notes = document.getElementById('gemini-notes-input').value.trim();
+  const workAuth = document.getElementById('work-auth-select').value;
+  const title = document.getElementById('candidate-title').value;
+
+  const fields = [
+    { label: 'First Name', api: 'FirstName', value: firstName },
+    { label: 'Last Name', api: 'LastName', value: lastName },
+    { label: 'Account Name', api: 'AccountId', value: config.accountName },
+    { label: 'Contact Type', api: config.fieldContactType, value: 'Candidate' },
+    { label: 'Title / Headline', api: 'Title', value: title },
+    { label: 'Email', api: 'Email', value: email },
+    { label: 'Phone', api: 'Phone', value: phone },
+    { label: 'Mobile Phone', api: 'MobilePhone', value: mobile },
+    { label: 'LinkedIn Profile', api: config.fieldLinkedIn, value: linkedin },
+    { label: 'Work Authorization', api: config.fieldWorkAuth, value: workAuth },
+    { label: 'Resume URL (Drive)', api: config.fieldResumeUrl, value: driveUrl },
+    { label: 'Key Notes (Gemini)', api: config.fieldKeyNotes, value: notes }
+  ];
+
+  const tbody = document.getElementById('fields-table-body');
+  tbody.innerHTML = '';
+  fields.forEach(f => {
+    const rawVal = f.value || '';
+    const safeVal = escapeHtml(rawVal);
+    const displayVal = safeVal || '<span class="text-slate-600 italic">empty</span>';
+    const row = document.createElement('tr');
+    row.className = 'hover:bg-slate-800/50 transition';
+    row.innerHTML = `
+      <td class="px-3 py-2">
+        <div class="font-medium text-slate-200">${escapeHtml(f.label)}</div>
+        <div class="text-[10px] text-slate-500 font-mono">${escapeHtml(f.api)}</div>
+      </td>
+      <td class="px-3 py-2 font-mono text-slate-300 max-w-[200px] truncate" title="${safeVal}">
+        ${displayVal}
+      </td>
+      <td class="px-3 py-2 text-right">
+        <button class="copy-cell-btn text-[11px] text-blue-400 hover:text-blue-300 px-2 py-0.5 rounded bg-slate-800 border border-slate-700">Copy</button>
+      </td>`;
+    row.querySelector('.copy-cell-btn').addEventListener('click', () => copyToClipboard(rawVal, 'Field copied!'));
+    tbody.appendChild(row);
+  });
+
+  const domain = config.sfDomain || 'yourcompany.lightning.force.com';
+  const params = [
+    `FirstName=${enc(firstName)}`, `LastName=${enc(lastName)}`,
+    `Title=${enc(title)}`, `Email=${enc(email)}`,
+    `Phone=${enc(phone)}`, `MobilePhone=${enc(mobile)}`,
+    `${config.fieldContactType}=${enc('Candidate')}`,
+    `${config.fieldWorkAuth}=${enc(workAuth)}`
+  ];
+  if (linkedin) params.push(`${config.fieldLinkedIn}=${enc(linkedin)}`);
+  if (driveUrl) params.push(`${config.fieldResumeUrl}=${enc(driveUrl)}`);
+  if (notes) params.push(`${config.fieldKeyNotes}=${enc(notes)}`);
+
+  document.getElementById('open-sf-btn').href =
+    `https://${domain}/lightning/o/Contact/new?defaultFieldValues=${params.join(',')}`;
+}
+
+const enc = encodeURIComponent;
+
+// ═══════════════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), 2500);
+}
+
+function copyToClipboard(text, msg = 'Copied!') {
+  navigator.clipboard.writeText(text).then(() => showToast(msg)).catch(() => showToast('Could not copy'));
+}
+
+function cleanDomain(v) {
+  return v.replace(/^https?:\/\//i,'').replace(/\/.*$/,'').trim();
+}
+
+function saveDomain(val) {
+  const clean = cleanDomain(val);
+  if (!clean) return;
+  config.sfDomain = clean;
+  localStorage.setItem('sfDomain', clean);
+  const badge = document.getElementById('domain-status-badge');
+  badge.textContent = 'Configured ✓';
+  badge.className = 'text-[10px] text-emerald-400 font-bold';
+  document.getElementById('domain-warning-banner').classList.add('hidden');
+  document.getElementById('quick-sf-domain').value = clean;
+  document.getElementById('cfg-sf-domain').value = clean;
+  showToast('Salesforce domain saved!');
+  if (candidateData) rebuildSalesforceUrl();
+}
+
+function handleJson(raw) {
+  try {
+    candidateData = JSON.parse(raw);
+    document.getElementById('drive-success-alert').classList.add('hidden');
+    document.getElementById('drive-folder-url').value = '';
+    updateUI();
+    showToast('JSON loaded!');
+  } catch { alert('Invalid JSON — please check the file.'); }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// EVENT LISTENERS
+// ═══════════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  // Restore config
+  document.getElementById('quick-sf-domain').value = config.sfDomain;
+  document.getElementById('cfg-sf-domain').value = config.sfDomain;
+  document.getElementById('cfg-oauth-client-id').value = config.oauthClientId;
+  document.getElementById('cfg-field-type').value = config.fieldContactType;
+  document.getElementById('cfg-field-auth').value = config.fieldWorkAuth;
+  document.getElementById('cfg-field-linkedin').value = config.fieldLinkedIn;
+  document.getElementById('cfg-field-resume').value = config.fieldResumeUrl;
+  document.getElementById('cfg-field-notes').value = config.fieldKeyNotes;
+  document.getElementById('cfg-field-account').value = config.accountName;
+
+  if (config.sfDomain) saveDomain(config.sfDomain);
+
+  // Init Google Auth if client ID is configured
+  if (config.oauthClientId) {
+    setTimeout(initGoogleAuth, 800);
+  }
+
+  // JSON upload
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('json-file-input');
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('border-blue-500'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-blue-500'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('border-blue-500');
+    const file = e.dataTransfer.files[0];
+    if (file) { const r = new FileReader(); r.onload = ev => handleJson(ev.target.result); r.readAsText(file); }
+  });
+  fileInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) { const r = new FileReader(); r.onload = ev => handleJson(ev.target.result); r.readAsText(file); }
+  });
+  document.getElementById('raw-json-input').addEventListener('input', function() {
+    if (this.value.trim().startsWith('{')) handleJson(this.value.trim());
+  });
+
+  // Sample
+  document.getElementById('load-sample-btn').addEventListener('click', () => {
+    candidateData = SAMPLE;
+    document.getElementById('gemini-notes-input').value = 'Strong SAFe leadership. Target $140k-$155k. Available in 2 weeks.';
+    document.getElementById('drive-success-alert').classList.add('hidden');
+    document.getElementById('drive-folder-url').value = '';
+    updateUI();
+    showToast('Sample loaded!');
+  });
+
+  // Folder skill pickers
+  ['skill-1','skill-2','skill-3','skill-country'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateFolderName);
+  });
+
+  document.getElementById('work-auth-select').addEventListener('change', updateUI);
+  document.getElementById('tech-folder-select').addEventListener('change', () => {
+    document.getElementById('drive-folder-target').textContent = document.getElementById('tech-folder-select').value;
+  });
+
+  document.getElementById('gemini-notes-input').addEventListener('input', rebuildSalesforceUrl);
+  document.getElementById('drive-folder-url').addEventListener('input', rebuildSalesforceUrl);
+
+  // Copy buttons
+  document.getElementById('copy-title-btn').addEventListener('click', () => copyToClipboard(document.getElementById('candidate-title').value, 'Title copied!'));
+  document.getElementById('copy-folder-name-btn').addEventListener('click', () => copyToClipboard(document.getElementById('computed-folder-name').value, 'Folder name copied!'));
+
+  // Drive
+  document.getElementById('connect-drive-btn').addEventListener('click', requestDriveAccess);
+  document.getElementById('drive-signout-btn').addEventListener('click', () => { setDriveConnectedUI(false); showToast('Disconnected from Google Drive'); });
+  document.getElementById('disconnect-drive-btn').addEventListener('click', () => { setDriveConnectedUI(false); showToast('Disconnected'); document.getElementById('settings-modal').classList.add('hidden'); });
+  document.getElementById('create-drive-folder-btn').addEventListener('click', createCandidateDriveFolder);
+
+  // Screening brief copy
+  document.getElementById('copy-summary-doc-btn').addEventListener('click', () => {
+    if (!candidateData) return;
+    const d = candidateData;
+    const text = [
+      `# Candidate Screening Brief: ${d.name}`,
+      `**Target Role:** ${getCleanRoleTitle(d)}`,
+      `**Work Authorization:** ${document.getElementById('work-auth-select').value}`,
+      `**Folder Name:** ${document.getElementById('computed-folder-name').value}`,
+      `**Phone:** ${findPhone(d).phone || 'N/A'}`,
+      `**Email:** ${findEmail(d) || 'N/A'}`,
+      `**LinkedIn:** ${findLinkedIn(d) || 'N/A'}`,
+      `\n---\n`,
+      `### Screening Notes\n${document.getElementById('gemini-notes-input').value || 'None'}`,
+      `\n---\n`,
+      `### Summary\n${d.unknown?.professional_summary || 'N/A'}`,
+      `\n### Certifications\n${(d.certifications || []).map(c => `- ${c.name}`).join('\n')}`,
+      `\n### Tools\n${d.technical_experience?.primary_tools || 'N/A'}`
+    ].join('\n');
+    copyToClipboard(text, 'Screening brief copied!');
+  });
+
+  // Salesforce domain
+  document.getElementById('save-quick-domain-btn').addEventListener('click', () => saveDomain(document.getElementById('quick-sf-domain').value));
+  document.getElementById('banner-fix-domain-btn').addEventListener('click', () => document.getElementById('settings-modal').classList.remove('hidden'));
+
+  // Settings
+  document.getElementById('settings-toggle-btn').addEventListener('click', () => document.getElementById('settings-modal').classList.remove('hidden'));
+  document.getElementById('close-settings-btn').addEventListener('click', () => document.getElementById('settings-modal').classList.add('hidden'));
+  document.getElementById('save-settings-btn').addEventListener('click', () => {
+    const newClientId = document.getElementById('cfg-oauth-client-id').value.trim();
+    if (newClientId !== config.oauthClientId) {
+      config.oauthClientId = newClientId;
+      localStorage.setItem('oauthClientId', newClientId);
+      tokenClient = null;
+      setTimeout(initGoogleAuth, 300);
+    }
+    saveDomain(document.getElementById('cfg-sf-domain').value);
+    config.fieldContactType = document.getElementById('cfg-field-type').value.trim();
+    config.fieldWorkAuth = document.getElementById('cfg-field-auth').value.trim();
+    config.fieldLinkedIn = document.getElementById('cfg-field-linkedin').value.trim();
+    config.fieldResumeUrl = document.getElementById('cfg-field-resume').value.trim();
+    config.fieldKeyNotes = document.getElementById('cfg-field-notes').value.trim();
+    config.accountName = document.getElementById('cfg-field-account').value.trim();
+    ['fieldContactType','fieldWorkAuth','fieldLinkedIn','fieldResumeUrl','fieldKeyNotes','accountName'].forEach(k => localStorage.setItem(k, config[k]));
+    document.getElementById('settings-modal').classList.add('hidden');
+    showToast('Settings saved!');
+    if (candidateData) rebuildSalesforceUrl();
+  });
+
+  // OAuth Setup Modal
+  document.getElementById('close-oauth-modal-btn').addEventListener('click', () => {
+    document.getElementById('oauth-setup-modal').classList.add('hidden');
+  });
+  document.getElementById('save-oauth-client-id-btn').addEventListener('click', () => {
+    const id = document.getElementById('oauth-client-id-input').value.trim();
+    if (!id) { alert('Please paste your OAuth Client ID.'); return; }
+    config.oauthClientId = id;
+    localStorage.setItem('oauthClientId', id);
+    document.getElementById('cfg-oauth-client-id').value = id;
+    document.getElementById('oauth-setup-modal').classList.add('hidden');
+    tokenClient = null;
+    initGoogleAuth();
+    showToast('OAuth Client ID saved!');
+    if (pendingDriveAction) {
+      setTimeout(requestDriveAccess, 400);
+    }
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bravo LT - Candidate Intake Assistant</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .fade-in { animation: fadeIn 0.25s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+  <!-- Top Navigation -->
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50 px-6 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="h-9 w-9 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/30">
+          B
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            Bravo LT <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">Candidate Intake</span>
+          </h1>
+          <p class="text-xs text-slate-400">Bravotizer JSON → Google Drive Folder → Salesforce Contact</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3 text-xs">
+        <button id="load-sample-btn" class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-blue-400 font-medium transition border border-slate-700 flex items-center gap-1.5">
+          <span>⚡</span> Load Jude Pagel (Demo)
+        </button>
+        <button id="settings-toggle-btn" class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition border border-slate-700 flex items-center gap-1.5">
+          <span>⚙️</span> Salesforce Settings
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notice Banner if Salesforce Domain is unconfigured -->
+  <div id="domain-warning-banner" class="bg-amber-500/10 border-b border-amber-500/30 px-6 py-2.5 text-xs text-amber-300 flex items-center justify-between">
+    <div class="flex items-center gap-2 max-w-7xl mx-auto w-full">
+      <span>⚠️</span>
+      <span>
+        <b>Action Required:</b> Set your real Salesforce Lightning domain below (e.g., <code>yourcompany.lightning.force.com</code>) so the launch button opens your Salesforce instance.
+      </span>
+      <button id="banner-fix-domain-btn" class="ml-auto underline font-bold hover:text-white">Configure Domain</button>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-lg w-full shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-white text-base">Salesforce & Environment Settings</h3>
+        <button id="close-settings-btn" class="text-slate-400 hover:text-white text-lg">&times;</button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+          <label class="block text-blue-300 font-bold mb-1">Your Salesforce Lightning Domain</label>
+          <input type="text" id="cfg-sf-domain" class="w-full bg-slate-900 border border-blue-500/50 rounded px-3 py-2 text-white font-mono text-xs" placeholder="e.g. bravolt--c.lightning.force.com">
+          <p class="text-[11px] text-slate-400 mt-1">Look at the URL in your browser when logged into Salesforce and paste the domain part here.</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-slate-300 mb-1">Contact Type Field</label>
+            <input type="text" id="cfg-field-type" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-white" value="Contact_Type__c">
+          </div>
+          <div>
+            <label class="block text-slate-300 mb-1">Work Auth Field</label>
+            <input type="text" id="cfg-field-auth" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-white" value="Work_Authorization__c">
+          </div>
+          <div>
+            <label class="block text-slate-300 mb-1">LinkedIn Profile Field</label>
+            <input type="text" id="cfg-field-linkedin" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-white" value="LinkedIn_Profile__c">
+          </div>
+          <div>
+            <label class="block text-slate-300 mb-1">Resume URL (Drive) Field</label>
+            <input type="text" id="cfg-field-resume" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-white" value="Resume_URL__c">
+          </div>
+          <div>
+            <label class="block text-slate-300 mb-1">Key Notes Field</label>
+            <input type="text" id="cfg-field-notes" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-white" value="Key_Notes__c">
+          </div>
+          <div>
+            <label class="block text-slate-300 mb-1">Default Account Name</label>
+            <input type="text" id="cfg-field-account" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-white" value="Recruits">
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end">
+        <button id="save-settings-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-medium text-xs">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left Column: Inputs (5 Cols) -->
+    <div class="lg:col-span-5 space-y-5">
+      <!-- 1. Bravotizer JSON Upload -->
+      <div class="bg-slate-800/70 border border-slate-700 rounded-xl p-5 shadow-lg">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+          <span class="h-5 w-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs">1</span>
+          Bravotizer JSON
+        </h2>
+        
+        <div id="drop-zone" class="border-2 border-dashed border-slate-600 hover:border-blue-500 rounded-lg p-5 text-center cursor-pointer transition bg-slate-900/50">
+          <div class="text-slate-400 text-xs mb-1">
+            <span class="text-blue-400 font-medium">Click to upload</span> or drag & drop JSON file
+          </div>
+          <div class="text-[11px] text-slate-500">From https://rbt.bravolt.com/</div>
+          <input type="file" id="json-file-input" accept=".json" class="hidden">
+        </div>
+
+        <div class="mt-3">
+          <label class="text-[11px] text-slate-400 block mb-1">Or paste raw JSON directly:</label>
+          <textarea id="raw-json-input" rows="3" placeholder="Paste { ... } here" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs font-mono text-slate-300 focus:outline-none focus:border-blue-500 transition"></textarea>
+        </div>
+      </div>
+
+      <!-- 2. Candidate Context Inputs -->
+      <div class="bg-slate-800/70 border border-slate-700 rounded-xl p-5 shadow-lg space-y-4">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+          <span class="h-5 w-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs">2</span>
+          Recruiter Context
+        </h2>
+
+        <!-- Salesforce Domain Quick Bar -->
+        <div class="bg-slate-900 p-3 rounded-lg border border-slate-700 text-xs space-y-1">
+          <label class="block text-slate-300 font-medium flex items-center justify-between">
+            <span>Salesforce Domain:</span>
+            <span id="domain-status-badge" class="text-[10px] text-amber-400 font-bold">Action Required</span>
+          </label>
+          <div class="flex gap-2">
+            <input type="text" id="quick-sf-domain" placeholder="e.g. yourcompany.lightning.force.com" class="flex-1 bg-slate-950 border border-slate-700 rounded px-2.5 py-1 text-white font-mono text-xs focus:outline-none focus:border-blue-500">
+            <button id="save-quick-domain-btn" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-medium">Save</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 text-xs">
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Work Authorization</label>
+            <select id="work-auth-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500">
+              <option value="USC" selected>USC (US Citizen)</option>
+              <option value="Green Card">Green Card (Permanent Resident)</option>
+              <option value="H-1B">H-1B</option>
+              <option value="C2C">C2C</option>
+              <option value="TN">TN Visa</option>
+              <option value="EAD">EAD</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Target Tech Folder</label>
+            <select id="tech-folder-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500">
+              <option value="Delivery Manager">Delivery Manager</option>
+              <option value="Software Developer">Software Developer</option>
+              <option value="Data Engineer">Data Engineer</option>
+              <option value="Azure Engineer">Azure Engineer</option>
+              <option value="UX Designer">UX Designer</option>
+              <option value="Project Manager - Healthcare (Non-IT)">Project Manager - Healthcare (Non-IT)</option>
+              <option value="Supplier Performance Analyst">Supplier Performance Analyst</option>
+              <option value="Electronic Engineers">Electronic Engineers</option>
+              <option value="CX/DX">CX/DX</option>
+              <option value="Bissell | Utility Team | Project Resumes">Bissell | Utility Team</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1 text-xs">Gemini Screening Notes (from Email)</label>
+          <textarea id="gemini-notes-input" rows="3" placeholder="Paste screening notes from Gemini / email here..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1 text-xs">Google Drive Folder URL (Auto-filled on creation)</label>
+          <input type="text" id="drive-folder-url" placeholder="https://drive.google.com/drive/folders/..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-emerald-400 font-mono placeholder-slate-600 focus:outline-none focus:border-emerald-500 transition">
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Results & Actions (7 Cols) -->
+    <div class="lg:col-span-7 space-y-5">
+
+      <!-- Candidate Header Card -->
+      <div id="candidate-card" class="bg-gradient-to-r from-slate-800 to-slate-850 border border-slate-700 rounded-xl p-5 shadow-lg relative overflow-hidden">
+        <div class="flex items-start justify-between">
+          <div class="flex items-center space-x-4">
+            <div id="candidate-avatar" class="h-14 w-14 rounded-full bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold text-xl flex items-center justify-center shadow-inner">
+              --
+            </div>
+            <div>
+              <h2 id="candidate-name" class="text-xl font-bold text-white tracking-tight">No Candidate Loaded</h2>
+              <p id="candidate-role" class="text-xs text-blue-400 font-medium mt-0.5">Upload or paste a JSON to start</p>
+              <div id="contact-pills" class="flex flex-wrap gap-2 mt-2 text-xs">
+                <span id="pill-email" class="bg-slate-900/60 px-2.5 py-1 rounded border border-slate-700 text-slate-300 flex items-center gap-1">
+                  ✉️ <span class="val">--</span>
+                </span>
+                <span id="pill-phone" class="bg-slate-900/60 px-2.5 py-1 rounded border border-slate-700 text-slate-300 flex items-center gap-1">
+                  📞 <span class="val">--</span>
+                </span>
+                <a id="pill-linkedin" href="#" target="_blank" class="bg-slate-900/60 hover:bg-slate-700/60 px-2.5 py-1 rounded border border-slate-700 text-blue-400 flex items-center gap-1 transition">
+                  🔗 <span class="val">LinkedIn</span>
+                </a>
+              </div>
+            </div>
+          </div>
+          <div id="match-badge" class="hidden px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            95% Role Match
+          </div>
+        </div>
+
+        <!-- Headline Bar -->
+        <div class="mt-4 pt-4 border-t border-slate-700/80">
+          <div class="flex justify-between items-center mb-1">
+            <label class="text-xs font-medium text-slate-300">Salesforce Contact Title Headline</label>
+            <button id="copy-title-btn" class="text-[11px] text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
+              📋 Copy
+            </button>
+          </div>
+          <input type="text" id="candidate-title" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-medium text-white focus:outline-none focus:border-blue-500" placeholder="[Name] | [Role] | [Certs] | [State] | [Work Auth]">
+        </div>
+      </div>
+
+      <!-- Action 1: Google Drive Organization & 1-Click Native Creation -->
+      <div class="bg-slate-800/70 border border-slate-700 rounded-xl p-5 shadow-lg space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            <span>📁</span> Google Drive Folder Automation
+          </h3>
+          <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium font-mono text-[11px]">first last | skill | skill | skill | Country</span>
+        </div>
+
+        <!-- Folder Target Display -->
+        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-2">
+          <div class="text-[11px] text-slate-400 flex items-center gap-1.5">
+            <span>Target:</span>
+            <span class="text-slate-300 font-mono">Shared with me > Candidates > Technology ></span>
+            <span id="drive-folder-target" class="text-blue-400 font-semibold font-mono">Delivery Manager</span>
+          </div>
+
+          <!-- Dynamic Folder Name Display -->
+          <div>
+            <div class="flex items-center gap-2">
+              <input type="text" id="computed-folder-name" class="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-xs font-mono font-medium text-emerald-400 focus:outline-none focus:border-emerald-500">
+              <button id="copy-folder-name-btn" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs whitespace-nowrap border border-slate-700 transition">
+                📋 Copy
+              </button>
+            </div>
+          </div>
+
+          <!-- Skill & Country Customizer Pills -->
+          <div class="pt-2 border-t border-slate-800/80">
+            <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1.5 font-semibold">Tweak Skills or Country:</div>
+            <div class="grid grid-cols-4 gap-2 text-xs">
+              <div>
+                <label class="text-[10px] text-slate-500 block mb-0.5">Skill 1</label>
+                <input type="text" id="skill-1" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-500 block mb-0.5">Skill 2</label>
+                <input type="text" id="skill-2" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-500 block mb-0.5">Skill 3</label>
+                <input type="text" id="skill-3" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs">
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-500 block mb-0.5">Country</label>
+                <input type="text" id="skill-country" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono font-bold" value="US">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Automatic Folder Creation Action Button -->
+        <div class="space-y-2">
+          <button id="auto-create-drive-btn" class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition transform active:scale-[0.99]">
+            <span id="auto-create-spinner" class="hidden animate-spin">⏳</span>
+            <span>⚡ Automatically Create Folder & Brief in Google Drive</span>
+          </button>
+
+          <div id="drive-success-alert" class="hidden bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-xs text-emerald-300 flex items-center justify-between">
+            <span class="flex items-center gap-1.5">
+              <span>✅</span> Folder & Screening Brief successfully created in Google Drive!
+            </span>
+            <a id="drive-open-link" href="#" target="_blank" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium text-[11px] transition">
+              Open in Drive ↗
+            </a>
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <button id="copy-summary-doc-btn" class="flex-1 py-2 bg-slate-900 hover:bg-slate-850 text-slate-300 text-xs rounded-lg border border-slate-700 font-medium transition flex items-center justify-center gap-1.5">
+            📝 Copy Screening Brief (Markdown)
+          </button>
+        </div>
+      </div>
+
+      <!-- Action 2: Salesforce Pre-Fill Generator -->
+      <div class="bg-slate-800/70 border border-slate-700 rounded-xl p-5 shadow-lg space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+            <span>☁️</span> Salesforce Contact Creation
+          </h3>
+          <span class="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium">Lightning URL Pre-Fill</span>
+        </div>
+
+        <!-- Big Launch Button -->
+        <a id="open-sf-btn" href="#" target="_blank" class="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm shadow-xl shadow-blue-600/20 flex items-center justify-center gap-2 transition transform active:scale-[0.99] text-center">
+          <span>🚀</span> Open Pre-Filled Contact in Salesforce
+        </a>
+
+        <!-- Mapped Fields Inspection & 1-Click Copy Table -->
+        <div class="border border-slate-700/80 rounded-lg overflow-hidden text-xs">
+          <table class="w-full divide-y divide-slate-700">
+            <thead class="bg-slate-900 text-slate-400 text-[11px] uppercase tracking-wider">
+              <tr>
+                <th class="px-3 py-2 text-left font-medium">Salesforce Field</th>
+                <th class="px-3 py-2 text-left font-medium">Mapped Value</th>
+                <th class="px-3 py-2 text-right font-medium">Action</th>
+              </tr>
+            </thead>
+            <tbody id="fields-table-body" class="divide-y divide-slate-800 bg-slate-900/40 text-slate-300">
+              <tr><td colspan="3" class="px-3 py-4 text-center text-slate-500">Load a JSON to view mapped fields</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 bg-blue-600 text-white text-xs px-4 py-2.5 rounded-lg shadow-xl hidden fade-in z-50 flex items-center gap-2">
+    <span>✅</span> <span id="toast-msg">Copied to clipboard</span>
+  </div>
+
+  <script>
+    // Embedded Demo Data (Jude Pagel)
+    const SAMPLE_CANDIDATE = {
+      "role": "Scrum Master",
+      "role_match": 0.95,
+      "name": "Jude Pagel",
+      "suggested_level": "Senior Scrum Master",
+      "technical_experience": {
+        "primary_tools": "SAFe Agile Framework, Scrum, VSTS, Jira, Rally, Blue Yonder, Appian development",
+        "methodologies": "SAFe Agile Framework, Scrum, Kanban, Lean Methodology",
+        "platforms": "VSTS, CI/CD pipeline, Blue Yonder, Appian, JDA"
+      },
+      "certifications": [
+        { "name": "SAFe Agile Framework - SP (SAFe Practitioner)" },
+        { "name": "SAFe Agile Framework - ASM (Advanced Scrum Master)" },
+        { "name": "PMP (Project Management Professional)" }
+      ],
+      "contact": {
+        "address": "2206 Maplerow Avenue NW Grand Rapids, MI 49534",
+        "phone": "(517) 643-1888",
+        "mobile": "(517) 643-1888",
+        "email": "jpagel84@gmail.com",
+        "linkedin": "www.linkedin.com/in/jude-pagel"
+      },
+      "unknown": {
+        "professional_summary": "Highly motivated professional experienced in strategic analytics, Agile business practices, and process improvement/development."
+      }
+    };
+
+    // State
+    let candidateData = null;
+    let config = {
+      sfDomain: localStorage.getItem('sfDomain') || '',
+      contactType: localStorage.getItem('contactType') || 'Candidate',
+      fieldContactType: localStorage.getItem('fieldContactType') || 'Contact_Type__c',
+      fieldWorkAuth: localStorage.getItem('fieldWorkAuth') || 'Work_Authorization__c',
+      fieldLinkedIn: localStorage.getItem('fieldLinkedIn') || 'LinkedIn_Profile__c',
+      fieldResumeUrl: localStorage.getItem('fieldResumeUrl') || 'Resume_URL__c',
+      fieldKeyNotes: localStorage.getItem('fieldKeyNotes') || 'Key_Notes__c',
+      accountName: localStorage.getItem('accountName') || 'Recruits'
+    };
+
+    // Elements
+    const domainWarningBanner = document.getElementById('domain-warning-banner');
+    const bannerFixDomainBtn = document.getElementById('banner-fix-domain-btn');
+    const quickSfDomain = document.getElementById('quick-sf-domain');
+    const saveQuickDomainBtn = document.getElementById('save-quick-domain-btn');
+    const domainStatusBadge = document.getElementById('domain-status-badge');
+
+    const dropZone = document.getElementById('drop-zone');
+    const jsonFileInput = document.getElementById('json-file-input');
+    const rawJsonInput = document.getElementById('raw-json-input');
+    const loadSampleBtn = document.getElementById('load-sample-btn');
+    const workAuthSelect = document.getElementById('work-auth-select');
+    const techFolderSelect = document.getElementById('tech-folder-select');
+    const geminiNotesInput = document.getElementById('gemini-notes-input');
+    const driveFolderUrlInput = document.getElementById('drive-folder-url');
+
+    const candidateAvatar = document.getElementById('candidate-avatar');
+    const candidateName = document.getElementById('candidate-name');
+    const candidateRole = document.getElementById('candidate-role');
+    const pillEmail = document.getElementById('pill-email');
+    const pillPhone = document.getElementById('pill-phone');
+    const pillLinkedin = document.getElementById('pill-linkedin');
+    const matchBadge = document.getElementById('match-badge');
+    const candidateTitle = document.getElementById('candidate-title');
+
+    // Drive elements
+    const driveFolderTarget = document.getElementById('drive-folder-target');
+    const computedFolderName = document.getElementById('computed-folder-name');
+    const copyFolderNameBtn = document.getElementById('copy-folder-name-btn');
+    const copySummaryDocBtn = document.getElementById('copy-summary-doc-btn');
+    const autoCreateDriveBtn = document.getElementById('auto-create-drive-btn');
+    const autoCreateSpinner = document.getElementById('auto-create-spinner');
+    const driveSuccessAlert = document.getElementById('drive-success-alert');
+    const driveOpenLink = document.getElementById('drive-open-link');
+    const skill1Input = document.getElementById('skill-1');
+    const skill2Input = document.getElementById('skill-2');
+    const skill3Input = document.getElementById('skill-3');
+    const skillCountryInput = document.getElementById('skill-country');
+
+    // Modals
+    const settingsToggleBtn = document.getElementById('settings-toggle-btn');
+    const settingsModal = document.getElementById('settings-modal');
+    const closeSettingsBtn = document.getElementById('close-settings-btn');
+    const saveSettingsBtn = document.getElementById('save-settings-btn');
+    const cfgSfDomain = document.getElementById('cfg-sf-domain');
+
+    const openSfBtn = document.getElementById('open-sf-btn');
+    const fieldsTableBody = document.getElementById('fields-table-body');
+    const copyTitleBtn = document.getElementById('copy-title-btn');
+
+    function updateDomainStatus() {
+      if (!config.sfDomain || config.sfDomain.includes('bravolt.lightning.force.com')) {
+        domainWarningBanner.classList.remove('hidden');
+        domainStatusBadge.textContent = 'Action Required';
+        domainStatusBadge.className = 'text-[10px] text-amber-400 font-bold';
+      } else {
+        domainWarningBanner.classList.add('hidden');
+        domainStatusBadge.textContent = 'Configured ✓';
+        domainStatusBadge.className = 'text-[10px] text-emerald-400 font-bold';
+      }
+      quickSfDomain.value = config.sfDomain;
+      cfgSfDomain.value = config.sfDomain;
+    }
+    updateDomainStatus();
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').textContent = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 2200);
+    }
+
+    function copyToClipboard(text, msg = 'Copied to clipboard!') {
+      navigator.clipboard.writeText(text).then(() => showToast(msg));
+    }
+
+    function cleanDomain(val) {
+      return val.replace(/^https?:\/\//i, '').replace(/\/.*$/, '').trim();
+    }
+
+    function saveDomain(newVal) {
+      const clean = cleanDomain(newVal);
+      if (!clean) return;
+      config.sfDomain = clean;
+      localStorage.setItem('sfDomain', clean);
+      updateDomainStatus();
+      showToast('Salesforce Domain Saved!');
+      if (candidateData) updateUI();
+    }
+
+    saveQuickDomainBtn.addEventListener('click', () => saveDomain(quickSfDomain.value));
+    bannerFixDomainBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+
+    // Universal Extractors: Email, Phone, LinkedIn, Address
+    function findEmail(data) {
+      if (!data) return '';
+      const contact = data.contact || {};
+      const contactInfo = data.contact_info || {};
+      const unknownContact = (data.unknown && data.unknown.contact_info) ? data.unknown.contact_info : {};
+      const unknown = data.unknown || {};
+
+      const candidates = [
+        contact.email, contactInfo.email, unknownContact.email, unknown.email, data.email
+      ];
+
+      for (const c of candidates) {
+        if (c && typeof c === 'string' && c.includes('@')) return c.trim();
+      }
+
+      const raw = JSON.stringify(data);
+      const match = raw.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+      return match ? match[0] : '';
+    }
+
+    function findPhone(data) {
+      if (!data) return { phone: '', mobile: '' };
+      const contact = data.contact || {};
+      const contactInfo = data.contact_info || {};
+      const unknownContact = (data.unknown && data.unknown.contact_info) ? data.unknown.contact_info : {};
+      const unknown = data.unknown || {};
+
+      let mobileVal = '';
+      let phoneVal = '';
+
+      const mobileCandidates = [contact.mobile, contactInfo.mobile, unknownContact.mobile, unknown.mobile, data.mobile];
+      for (const m of mobileCandidates) {
+        if (m && typeof m === 'string' && /\d/.test(m)) {
+          mobileVal = m.trim();
+          break;
+        }
+      }
+
+      const phoneCandidates = [
+        contact.phone, contact.phone_number, contact.cell, contact.telephone,
+        contactInfo.phone, contactInfo.phone_number, contactInfo.cell,
+        unknownContact.phone, unknownContact.phone_number, unknownContact.cell,
+        data.phone, data.phone_number, data.cell
+      ];
+      for (const p of phoneCandidates) {
+        if (p && typeof p === 'string' && /\d/.test(p)) {
+          phoneVal = p.trim();
+          break;
+        }
+      }
+
+      // Universal Phone Rule: Use any phone number available for both
+      if (!phoneVal && mobileVal) phoneVal = mobileVal;
+      if (!mobileVal && phoneVal) mobileVal = phoneVal;
+
+      if (!phoneVal && !mobileVal) {
+        const raw = JSON.stringify(data);
+        const match = raw.match(/\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
+        if (match) {
+          phoneVal = match[0];
+          mobileVal = match[0];
+        }
+      }
+
+      return { phone: phoneVal, mobile: mobileVal };
+    }
+
+    function findLinkedIn(data) {
+      if (!data) return '';
+      const contact = data.contact || {};
+      const contactInfo = data.contact_info || {};
+      const unknownContact = (data.unknown && data.unknown.contact_info) ? data.unknown.contact_info : {};
+      const candidates = [contact.linkedin, contactInfo.linkedin, unknownContact.linkedin, data.linkedin];
+
+      for (const l of candidates) {
+        if (l && typeof l === 'string' && l.toLowerCase().includes('linkedin')) {
+          const trimmed = l.trim();
+          return trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
+        }
+      }
+
+      const raw = JSON.stringify(data);
+      const match = raw.match(/(https?:\/\/)?(www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+\/?/);
+      if (match) {
+        const link = match[0];
+        return link.startsWith('http') ? link : `https://${link}`;
+      }
+      return '';
+    }
+
+    function findAddress(data) {
+      if (!data) return '';
+      const contact = data.contact || {};
+      const contactInfo = data.contact_info || {};
+      const unknownContact = (data.unknown && data.unknown.contact_info) ? data.unknown.contact_info : {};
+      const candidates = [
+        contact.address, contact.location,
+        contactInfo.address, contactInfo.location,
+        unknownContact.address, unknownContact.location,
+        data.address, data.location
+      ];
+      for (const a of candidates) {
+        if (a && typeof a === 'string' && a.trim().length > 3) return a.trim();
+      }
+      return '';
+    }
+
+    function extractState(address) {
+      if (!address) return '';
+      const match = address.match(/\b([A-Z]{2})\b\s+\d{5}/);
+      if (match) return match[1];
+      const matchName = address.match(/,\s*([A-Za-z\s]+)\s+\d{5}/);
+      if (matchName) {
+        const map = { 'Michigan': 'MI', 'Ohio': 'OH', 'Illinois': 'IL', 'New York': 'NY', 'Texas': 'TX', 'California': 'CA' };
+        return map[matchName[1].trim()] || matchName[1].trim().slice(0, 2).toUpperCase();
+      }
+      return '';
+    }
+
+    function extractCountry(address, workAuth) {
+      if (['USC', 'Green Card', 'H-1B', 'TN'].includes(workAuth)) return 'US';
+      if (address) {
+        if (address.match(/\b[A-Z]{2}\b\s+\d{5}/) || address.includes('Grand Rapids') || address.includes('USA')) return 'US';
+        if (address.includes('Canada')) return 'CA';
+        if (address.includes('India')) return 'IN';
+      }
+      return 'US';
+    }
+
+    function getCleanRoleTitle(data) {
+      const candidates = [];
+      if (data.suggested_level) candidates.push(data.suggested_level);
+      if (data.role) candidates.push(data.role);
+      (data.suggested_roles || []).forEach(sr => {
+        if (sr && sr.role) candidates.push(sr.role);
+      });
+      (data.professional_experience || []).slice(0, 2).forEach(pe => {
+        if (pe && pe.title) candidates.push(pe.title);
+      });
+
+      for (const c of candidates) {
+        if (!c) continue;
+        const str = String(c).trim();
+        // Skip L1, L2, L3, L4, L5, L6, L7, L8 and generic placeholders
+        if (/^L\d+$/i.test(str)) continue;
+        if (['agnostic', 'general', 'unknown', 'n/a', 'none'].includes(str.toLowerCase())) continue;
+        return str;
+      }
+      return 'Candidate';
+    }
+
+    function extractTopSkills(data) {
+      const skills = [];
+
+      // 1. Role or Primary Discipline (skip L1-L8 / agnostic, extract clean title or acronym)
+      const roleStr = getCleanRoleTitle(data);
+      if (roleStr && roleStr !== 'Candidate') {
+        const acronymMatch = roleStr.match(/\(([A-Z]{2,6})\)/);
+        if (acronymMatch) {
+          skills.push(acronymMatch[1]);
+        } else if (roleStr.toLowerCase().includes('scrum master')) {
+          skills.push('Scrum Master');
+        } else if (roleStr.toLowerCase().includes('data engineer')) {
+          skills.push('Data Engineer');
+        } else if (roleStr.toLowerCase().includes('azure')) {
+          skills.push('Azure Engineer');
+        } else if (roleStr.toLowerCase().includes('developer')) {
+          skills.push('Software Developer');
+        } else {
+          skills.push(roleStr.split(/[-/|]/)[0].trim().slice(0, 20));
+        }
+      }
+
+      // 2. Key Certifications (PMP, SAFe, CSM, RTE, AWS, Azure, GCP, Six Sigma, CISSP, ITIL)
+      const certs = data.certifications || [];
+      certs.forEach(c => {
+        const name = typeof c === 'object' ? c.name : String(c);
+        ['PMP', 'SAFe', 'CSM', 'RTE', 'AWS', 'Azure', 'GCP', 'Six Sigma', 'CISSP', 'ITIL'].forEach(tag => {
+          if (name.includes(tag) && !skills.some(s => s.toLowerCase() === tag.toLowerCase())) {
+            skills.push(tag === 'Six Sigma' ? 'LSS' : tag);
+          }
+        });
+      });
+
+      // 3. Technical Tools / Platforms
+      const toolsStr = data.technical_experience?.primary_tools || '';
+      if (toolsStr) {
+        toolsStr.split(',').forEach(tool => {
+          const cleaned = tool.split('(')[0].trim();
+          if (cleaned && !skills.some(s => s.toLowerCase() === cleaned.toLowerCase())) {
+            skills.push(cleaned);
+          }
+        });
+      }
+
+      // 4. Core Competencies fallback if available
+      const comps = data.unknown?.core_competencies || [];
+      comps.forEach(comp => {
+        const cStr = String(comp).trim();
+        const acronym = cStr.match(/\(([A-Z]{2,6})\)/);
+        const tag = acronym ? acronym[1] : cStr.split(/[-/|]/)[0].trim();
+        if (tag && !skills.some(s => s.toLowerCase() === tag.toLowerCase())) {
+          skills.push(tag.slice(0, 18));
+        }
+      });
+
+      const res = [];
+      skills.forEach(s => {
+        if (!res.includes(s) && res.length < 3) res.push(s);
+      });
+      while (res.length < 3) res.push('General');
+      return res;
+    }
+
+    function generateBravoTitle(data, workAuth) {
+      const name = data.name || '';
+      const parts = [name];
+
+      // Use clean title instead of raw 'L5' or 'agnostic'
+      const role = getCleanRoleTitle(data);
+      if (role && role !== 'Candidate') parts.push(role);
+
+      const certs = data.certifications || [];
+      const certTags = [];
+      certs.forEach(c => {
+        const cName = typeof c === 'object' ? c.name : String(c);
+        if (cName.includes('PMP') && !certTags.includes('PMP')) certTags.push('PMP');
+        if (cName.includes('SAFe') && !certTags.includes('SAFe')) certTags.push('SAFe');
+        if ((cName.includes('CSM') || cName.includes('Scrum Master')) && !certTags.includes('CSM')) certTags.push('CSM');
+        if (cName.includes('Six Sigma') && !certTags.includes('LSS')) certTags.push('LSS');
+      });
+      parts.push(...certTags.slice(0, 2));
+
+      const addr = findAddress(data);
+      const state = extractState(addr);
+      if (state) parts.push(state);
+      if (workAuth) parts.push(workAuth);
+
+      return parts.join(' | ');
+    }
+
+    function recommendFolder(data) {
+      const texts = [];
+      if (data.role) texts.push(data.role);
+      if (data.suggested_level) texts.push(data.suggested_level);
+      (data.suggested_roles || []).forEach(sr => {
+        if (sr && sr.role) texts.push(sr.role);
+      });
+      (data.professional_experience || []).slice(0, 3).forEach(pe => {
+        if (pe && pe.title) texts.push(pe.title);
+      });
+
+      const combined = texts.join(' ').toLowerCase();
+
+      if (['scrum', 'agile', 'delivery', 'release train', 'rte', 'program manager'].some(k => combined.includes(k))) {
+        return 'Delivery Manager';
+      }
+      if (['data', 'analytics', 'bi '].some(k => combined.includes(k))) {
+        return 'Data Engineer';
+      }
+      if (['azure', 'aws', 'cloud', 'devops'].some(k => combined.includes(k))) {
+        return 'Azure Engineer';
+      }
+      if (['ux', 'ui', 'design'].some(k => combined.includes(k))) {
+        return 'UX Designer';
+      }
+      if (['healthcare', 'supplier'].some(k => combined.includes(k))) {
+        return 'Project Manager - Healthcare (Non-IT)';
+      }
+      if (['developer', 'software', 'full stack'].some(k => combined.includes(k))) {
+        return 'Software Developer';
+      }
+      return 'Software Developer';
+    }
+
+    function updateFolderNameFromPills() {
+      if (!candidateData) return;
+      const name = candidateData.name || '';
+      const s1 = skill1Input.value.trim() || 'Skill';
+      const s2 = skill2Input.value.trim() || 'Skill';
+      const s3 = skill3Input.value.trim() || 'Skill';
+      const country = skillCountryInput.value.trim() || 'US';
+
+      // first last | skill | skill | skill | Country
+      const folderStr = `${name} | ${s1} | ${s2} | ${s3} | ${country}`;
+      computedFolderName.value = folderStr;
+    }
+
+    function updateUI() {
+      if (!candidateData) return;
+
+      const d = candidateData;
+      const name = d.name || 'Candidate';
+      const nameParts = name.trim().split(/\s+/);
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      const email = findEmail(d);
+      const { phone, mobile } = findPhone(d);
+      const linkedin = findLinkedIn(d);
+      const address = findAddress(d);
+
+      const initials = (firstName[0] || '') + (lastName[0] || '');
+      candidateAvatar.textContent = initials || '??';
+      candidateName.textContent = name;
+      candidateRole.textContent = d.suggested_level || d.role || 'Candidate';
+
+      pillEmail.querySelector('.val').textContent = email || 'No Email';
+      pillPhone.querySelector('.val').textContent = phone || mobile || 'No Phone';
+      pillLinkedin.href = linkedin || '#';
+      pillLinkedin.querySelector('.val').textContent = linkedin ? 'LinkedIn' : 'No LinkedIn';
+
+      if (d.role_match) {
+        matchBadge.textContent = `${Math.round(d.role_match * 100)}% Role Match`;
+        matchBadge.classList.remove('hidden');
+      }
+
+      // Title
+      const title = generateBravoTitle(d, workAuthSelect.value);
+      candidateTitle.value = title;
+
+      // Skills & Country for Drive folder
+      const skills = extractTopSkills(d);
+      skill1Input.value = skills[0] || '';
+      skill2Input.value = skills[1] || '';
+      skill3Input.value = skills[2] || '';
+      skillCountryInput.value = extractCountry(address, workAuthSelect.value);
+
+      updateFolderNameFromPills();
+
+      // Category Folder
+      const folder = recommendFolder(d);
+      techFolderSelect.value = folder;
+      driveFolderTarget.textContent = folder;
+
+      renderSalesforceMapping(firstName, lastName, title, email, phone, mobile, linkedin);
+    }
+
+    function renderSalesforceMapping(firstName, lastName, title, email, phone, mobile, linkedin) {
+      const driveUrl = driveFolderUrlInput.value.trim();
+      const notes = geminiNotesInput.value.trim();
+      const workAuth = workAuthSelect.value;
+
+      const fields = [
+        { label: 'First Name', api: 'FirstName', value: firstName },
+        { label: 'Last Name', api: 'LastName', value: lastName },
+        { label: 'Account Name', api: 'AccountId (Recruits)', value: config.accountName },
+        { label: 'Contact Type', api: config.fieldContactType, value: config.contactType },
+        { label: 'Title / Headline', api: 'Title', value: title },
+        { label: 'Email', api: 'Email', value: email },
+        { label: 'Phone', api: 'Phone', value: phone },
+        { label: 'Mobile Phone', api: 'MobilePhone', value: mobile },
+        { label: 'LinkedIn Profile', api: config.fieldLinkedIn, value: linkedin },
+        { label: 'Work Authorization', api: config.fieldWorkAuth, value: workAuth },
+        { label: 'Resume URL (Drive)', api: config.fieldResumeUrl, value: driveUrl },
+        { label: 'Key Notes (Gemini)', api: config.fieldKeyNotes, value: notes }
+      ];
+
+      fieldsTableBody.innerHTML = '';
+      fields.forEach(f => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-slate-800/50 transition';
+        row.innerHTML = `
+          <td class="px-3 py-2">
+            <div class="font-medium text-slate-200">${f.label}</div>
+            <div class="text-[10px] text-slate-500 font-mono">${f.api}</div>
+          </td>
+          <td class="px-3 py-2 font-mono text-slate-300 max-w-xs truncate" title="${f.value}">
+            ${f.value ? f.value : '<span class="text-slate-600 italic">empty</span>'}
+          </td>
+          <td class="px-3 py-2 text-right">
+            <button class="copy-cell-btn text-[11px] text-blue-400 hover:text-blue-300 font-medium px-2 py-0.5 rounded bg-slate-800 border border-slate-700" data-val="${f.value}">
+              Copy
+            </button>
+          </td>
+        `;
+        fieldsTableBody.appendChild(row);
+      });
+
+      document.querySelectorAll('.copy-cell-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const val = btn.getAttribute('data-val');
+          if (val) copyToClipboard(val, 'Field value copied!');
+        });
+      });
+
+      // Salesforce deep-link URL
+      const targetDomain = config.sfDomain || 'yourcompany.lightning.force.com';
+      const params = [
+        `FirstName=${encodeURIComponent(firstName)}`,
+        `LastName=${encodeURIComponent(lastName)}`,
+        `Title=${encodeURIComponent(title)}`,
+        `Email=${encodeURIComponent(email)}`,
+        `Phone=${encodeURIComponent(phone)}`,
+        `MobilePhone=${encodeURIComponent(mobile)}`,
+        `${config.fieldContactType}=${encodeURIComponent(config.contactType)}`,
+        `${config.fieldWorkAuth}=${encodeURIComponent(workAuth)}`
+      ];
+
+      if (linkedin) params.push(`${config.fieldLinkedIn}=${encodeURIComponent(linkedin)}`);
+      if (driveUrl) params.push(`${config.fieldResumeUrl}=${encodeURIComponent(driveUrl)}`);
+      if (notes) params.push(`${config.fieldKeyNotes}=${encodeURIComponent(notes)}`);
+
+      const sfUrl = `https://${targetDomain}/lightning/o/Contact/new?defaultFieldValues=${params.join(',')}`;
+      openSfBtn.href = sfUrl;
+    }
+
+    // 1-Click Native Google Apps Script Folder Creation
+    autoCreateDriveBtn.addEventListener('click', () => {
+      if (!candidateData) {
+        alert('Please load or paste a candidate JSON first!');
+        return;
+      }
+
+      const payload = {
+        category: techFolderSelect.value,
+        folderName: computedFolderName.value.trim(),
+        candidateName: candidateData.name || 'Candidate',
+        notesContent: geminiNotesInput.value.trim()
+      };
+
+      autoCreateSpinner.classList.remove('hidden');
+      autoCreateDriveBtn.disabled = true;
+
+      // Native Google Apps Script execution (bypasses all CORS and 401s!)
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler((res) => {
+            autoCreateSpinner.classList.add('hidden');
+            autoCreateDriveBtn.disabled = false;
+
+            if (res && res.success && res.folderUrl) {
+              driveFolderUrlInput.value = res.folderUrl;
+              driveOpenLink.href = res.folderUrl;
+              driveSuccessAlert.classList.remove('hidden');
+              showToast('Folder created in Google Drive!');
+              triggerFieldRebuild();
+            } else {
+              alert('Error creating folder: ' + (res ? res.error : 'Unknown error'));
+            }
+          })
+          .withFailureHandler((err) => {
+            autoCreateSpinner.classList.add('hidden');
+            autoCreateDriveBtn.disabled = false;
+            alert('Drive Error: ' + err.message);
+          })
+          .createDriveCandidateFolder(payload);
+      } else {
+        // Fallback for local testing outside Apps Script
+        setTimeout(() => {
+          autoCreateSpinner.classList.add('hidden');
+          autoCreateDriveBtn.disabled = false;
+          alert('Local preview mode: google.script.run is only active when hosted inside Google Apps Script.');
+        }, 600);
+      }
+    });
+
+    // Event Handlers
+    [skill1Input, skill2Input, skill3Input, skillCountryInput].forEach(el => {
+      el.addEventListener('input', updateFolderNameFromPills);
+    });
+
+    function handleJson(rawText) {
+      try {
+        candidateData = JSON.parse(rawText);
+        updateUI();
+        showToast('JSON loaded successfully!');
+      } catch (e) {
+        alert('Invalid JSON file. Please check syntax.');
+      }
+    }
+
+    dropZone.addEventListener('click', () => jsonFileInput.click());
+    jsonFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => handleJson(event.target.result);
+        reader.readAsText(file);
+      }
+    });
+
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-blue-500'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-blue-500'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-blue-500');
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => handleJson(event.target.result);
+        reader.readAsText(file);
+      }
+    });
+
+    rawJsonInput.addEventListener('input', () => {
+      const val = rawJsonInput.value.trim();
+      if (val.startsWith('{')) handleJson(val);
+    });
+
+    loadSampleBtn.addEventListener('click', () => {
+      candidateData = SAMPLE_CANDIDATE;
+      geminiNotesInput.value = "Screening Notes (Gemini):\n- Strong leadership presence, clear communication.\n- Handled SAFe transformation across 9 scrum teams at Meijer.\n- Target compensation: $140k - $155k base.\n- Ready to interview immediately; 2-week notice period.";
+      updateUI();
+      showToast('Sample candidate Jude Pagel loaded!');
+    });
+
+    workAuthSelect.addEventListener('change', updateUI);
+    techFolderSelect.addEventListener('change', () => {
+      driveFolderTarget.textContent = techFolderSelect.value;
+    });
+
+    function triggerFieldRebuild() {
+      if (candidateData) {
+        const nameParts = (candidateData.name || '').trim().split(/\s+/);
+        const email = findEmail(candidateData);
+        const { phone, mobile } = findPhone(candidateData);
+        const linkedin = findLinkedIn(candidateData);
+        renderSalesforceMapping(nameParts[0], nameParts.slice(1).join(' '), candidateTitle.value, email, phone, mobile, linkedin);
+      }
+    }
+
+    geminiNotesInput.addEventListener('input', triggerFieldRebuild);
+    driveFolderUrlInput.addEventListener('input', triggerFieldRebuild);
+
+    copyTitleBtn.addEventListener('click', () => {
+      copyToClipboard(candidateTitle.value, 'Title headline copied!');
+    });
+
+    copyFolderNameBtn.addEventListener('click', () => {
+      copyToClipboard(computedFolderName.value, 'Folder name copied!');
+    });
+
+    copySummaryDocBtn.addEventListener('click', () => {
+      if (!candidateData) return;
+      const d = candidateData;
+      const notes = geminiNotesInput.value.trim();
+      const email = findEmail(d);
+      const { phone } = findPhone(d);
+      const linkedin = findLinkedIn(d);
+
+      const summaryText = `# Candidate Screening Brief: ${d.name}
+**Target Role:** ${d.suggested_level || d.role}
+**Work Authorization:** ${workAuthSelect.value}
+**Folder Name:** ${computedFolderName.value}
+**Phone:** ${phone || 'N/A'}
+**Email:** ${email || 'N/A'}
+**LinkedIn:** ${linkedin || 'N/A'}
+
+---
+
+### Recruiter & Gemini Screening Notes
+${notes || 'No screening notes entered.'}
+
+---
+
+### Executive Summary
+${d.unknown?.professional_summary || 'N/A'}
+
+### Top Certifications
+${(d.certifications || []).map(c => `- ${c.name}`).join('\n')}
+
+### Core Tools & Platforms
+- **Primary Tools:** ${d.technical_experience?.primary_tools || 'N/A'}
+- **Methodologies:** ${d.technical_experience?.methodologies || 'N/A'}
+- **Platforms:** ${d.technical_experience?.platforms || 'N/A'}
+`;
+      copyToClipboard(summaryText, 'Screening brief copied to clipboard!');
+    });
+
+    // Settings Modal Handlers
+    settingsToggleBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+    closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+    saveSettingsBtn.addEventListener('click', () => {
+      const domainVal = cleanDomain(cfgSfDomain.value);
+      config.sfDomain = domainVal;
+      config.fieldContactType = document.getElementById('cfg-field-type').value.trim();
+      config.fieldWorkAuth = document.getElementById('cfg-field-auth').value.trim();
+      config.fieldLinkedIn = document.getElementById('cfg-field-linkedin').value.trim();
+      config.fieldResumeUrl = document.getElementById('cfg-field-resume').value.trim();
+      config.fieldKeyNotes = document.getElementById('cfg-field-notes').value.trim();
+      config.accountName = document.getElementById('cfg-field-account').value.trim();
+
+      localStorage.setItem('sfDomain', config.sfDomain);
+      localStorage.setItem('fieldContactType', config.fieldContactType);
+      localStorage.setItem('fieldWorkAuth', config.fieldWorkAuth);
+      localStorage.setItem('fieldLinkedIn', config.fieldLinkedIn);
+      localStorage.setItem('fieldResumeUrl', config.fieldResumeUrl);
+      localStorage.setItem('fieldKeyNotes', config.fieldKeyNotes);
+      localStorage.setItem('accountName', config.accountName);
+
+      settingsModal.classList.add('hidden');
+      updateDomainStatus();
+      if (candidateData) updateUI();
+      showToast('Settings saved!');
+    });
+  </script>
+</body>
+</html>
